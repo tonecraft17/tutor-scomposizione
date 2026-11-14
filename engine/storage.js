@@ -14,7 +14,7 @@
    The localStorage keys remain those of the original monolith:
    any progress already present is inherited with no migration.
    ============================================================ */
-import { KEYS, SUPABASE, supabaseConfigured } from '../config.js?v=16.1'; // ===== CHANGED v16.1 · versioned specifier (stale-ServiceWorker fix, see app.js) =====
+import { KEYS, SUPABASE, supabaseConfigured } from '../config.js?v=16.2'; // ===== CHANGED v16.1 · versioned specifier (stale-ServiceWorker fix, see app.js) =====
 
 const hasLS = typeof localStorage !== 'undefined';
 function lsRead(k, d){ if(!hasLS) return d; try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v); }catch(e){ return d; } }

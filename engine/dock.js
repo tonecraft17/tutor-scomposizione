@@ -52,7 +52,10 @@ export function createDock(opts){
 
   const ACT = [
     ['moduli',   'files', 'Modules & exercises'],     // v16 · opens the side drawer
-    ['traccia',  'book',  'Exercise walkthrough'],
+    // ===== REMOVED v16.2 · the 'traccia' (Exercise walkthrough) panel is gone:
+    //     its content already lives inside the Exercise panel (the "Exercise
+    //     statement" details + the chapter-concept chips), so the tab was a
+    //     duplicate. The activity bar and the mobile bar get one icon less. =====
     ['esercizio','code',  'Active exercise'],
     ['codice',   'filecode', 'Full code (editor + terminal)'],
     ['righe',    'rows',    'Exercise lines (light editor)'],
@@ -69,16 +72,17 @@ export function createDock(opts){
     ['account',  'user',  'Account & sync'],
   ];
   /* ===== CHANGED v16 · mobile tab management: the bottom bar keeps the
-     five tabs a phone actually uses between two taps (exercise, its
-     walkthrough, the console and the two media panels, which previously
-     were MISSING from the bar — a chart switched the tab and the student
-     had no button to come back or to see the charts again). Everything
-     else (editors, progress, sandbox, account) moves into the "⋯ More"
+     tabs a phone actually uses between two taps (the exercise, the console
+     and the two media panels, which previously were MISSING from the bar —
+     a chart switched the tab and the student had no button to come back or
+     to see the charts again; the walkthrough tab was dropped in v16.2:
+     the statement is in the Exercise panel itself). Everything else
+     (editors, progress, sandbox, account) moves into the "⋯ More"
      drop-up menu; Modules is the ☰ drawer and Guide the ? overlay, both
      opened from the mobile header. ===== */
-  const MOBILE_MAIN = ['esercizio','traccia','console','grafici','gioco'];
+  const MOBILE_MAIN = ['esercizio','console','grafici','gioco'];
   const MOBILE_MORE = ['codice','righe','progressi','sandbox','account'];
-  const OPEN_ZONES = { traccia:'left', esercizio:'right',
+  const OPEN_ZONES = { esercizio:'right',
                        codice:'bottom',                                                                    // ===== NEW v10 =====
                        righe:'bottom',                                                                     // ===== NEW v12 · the light editor opens in its own split (separate tab) =====
                        console:'bottom', grafici:'bottom', gioco:'bottom', progressi:'bottom', sandbox:'bottom', account:'right' };
@@ -155,8 +159,8 @@ export function createDock(opts){
      largest text block of the default layout, on desktop AND mobile), so
      it renders first, together with the skeleton; the heavy Modules tree
      follows in the next frame instead of delaying everything. */
-  const BODY_PRIO = { esercizio:0, moduli:1, traccia:2, console:3, codice:4,
-                      righe:5, progressi:6, grafici:7, gioco:8, sandbox:9,
+  const BODY_PRIO = { esercizio:0, moduli:1, console:2, codice:3,
+                      righe:4, progressi:5, grafici:6, gioco:7, sandbox:8,
                       account:10, guida:11 };
   let bodyQueue=[], bodyTick=0;
   function queueBodies(){

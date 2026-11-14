@@ -7,7 +7,7 @@
    - "soft" verification of the real output against the expected one
    Ported 1:1 from the monolith: the teaching messages are identical.
    ============================================================ */
-import { EX, ORDER, TOTAL_EX } from '../data/exercises.js?v=16.1'; // ===== CHANGED v16.1 · versioned specifier (stale-ServiceWorker fix, see app.js) =====
+import { EX, ORDER, TOTAL_EX } from '../data/exercises.js?v=16.2'; // ===== CHANGED v16.1 · versioned specifier (stale-ServiceWorker fix, see app.js) =====
 
 /* ---------- per-exercise state (with stable defaults) ---------- */
 export function stateFor(progress, id) {

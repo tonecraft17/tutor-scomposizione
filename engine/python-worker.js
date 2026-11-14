@@ -35,7 +35,7 @@
      → {type:'plotly-figure', json}
      → {type:'pygame-frame', buf|b64, w, h, gw, gh}   (w/h = downscaled frame, gw/gh = native screen)
    ============================================================ */
-import { PYODIDE } from '../config.js?v=16.1'; // ===== CHANGED v16.1 · versioned specifier (stale-ServiceWorker fix, see app.js) =====
+import { PYODIDE } from '../config.js?v=16.2'; // ===== CHANGED v16.1 · versioned specifier (stale-ServiceWorker fix, see app.js) =====
 
 const STDOUT_LIMIT = 200000;
 // Absolute limit for interactive Pygame games (seconds).

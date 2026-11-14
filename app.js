@@ -1,7 +1,7 @@
 /* ============================================================
    APP · entry point: joins the modules and starts the app
    ============================================================ */
-/* ===== NEW v16.1 · every ES-module import now carries the same ?v=16.1
+/* ===== NEW v16.1 · every ES-module import now carries the same ?v=16.2
    query as the <script>/<link> tags in index.html. WHY: the service worker
    caches same-origin GETs by their FULL URL (query included), and the
    module files used to have NO version in their URL. On the first visit
@@ -13,21 +13,21 @@
    stale worker cache-misses and fetches the fresh, consistent set. The
    specifiers must stay character-for-character identical to the
    modulepreload hrefs in index.html, or each file would be fetched twice. ===== */
-import { APP, KEYS, supabaseConfigured, PLOTLY_JS } from './config.js?v=16.1';
-import { CH, EX, ORDER, TOTAL_EX, ROADMAP, codiceEsercizio } from './data/exercises.js?v=16.1';
-import { createDock, isMobile, icon } from './engine/dock.js?v=16.1';
+import { APP, KEYS, supabaseConfigured, PLOTLY_JS } from './config.js?v=16.2';
+import { CH, EX, ORDER, TOTAL_EX, ROADMAP, codiceEsercizio } from './data/exercises.js?v=16.2';
+import { createDock, isMobile, icon } from './engine/dock.js?v=16.2';
 import {
   stateFor, righeUtente, righeUtenteRaw, righeUtenteConCommenti, conRientro, checkStep, assistLabel, assistSummary,
   autonomiaOf, globalStats, nextExercise, verificaOutput
-} from './engine/tutor.js?v=16.1';
+} from './engine/tutor.js?v=16.2';
 import {
   runPythonCode, getStatus, onPythonStatus,
   onMatplotlibImage, onPlotlyFigure, onPygameFrame,
   onPythonRunEnd, sendPygameEvent, stopPygameGame
-} from './engine/python-runner.js?v=16.1'; // ===== MODIFIED =====
-import * as storage from './engine/storage.js?v=16.1';
-import * as solDb from './engine/solutions-db.js?v=16.1'; // ===== NEW · local solutions database =====
-import { PONTE } from './engine/ponte.js?v=16.1'; // ===== NEW v12.1 · bridge from exercise lines → project =====
+} from './engine/python-runner.js?v=16.2'; // ===== MODIFIED =====
+import * as storage from './engine/storage.js?v=16.2';
+import * as solDb from './engine/solutions-db.js?v=16.2'; // ===== NEW · local solutions database =====
+import { PONTE } from './engine/ponte.js?v=16.2'; // ===== NEW v12.1 · bridge from exercise lines → project =====
 
 /* ---------- UI utilities ---------- */
 const $ = s => document.querySelector(s);
@@ -147,7 +147,10 @@ function toggleDrawer(open) {
     document.removeEventListener('keydown', drawerKey, true);
     if (DRAWER.invoker && DRAWER.invoker.isConnected) { try { DRAWER.invoker.focus(); } catch (e) { } }
     if (ab) ab.classList.remove('active');
-    setTimeout(() => { if (!DRAWER.open) { bg.hidden = true; drawer.hidden = true; } }, 280);
+    /* v16.2 · 360 ms: covers the closing slide of the bubble animation
+       (.3s) before the [hidden] attribute takes the drawer out of the a11y
+       tree — re-opening within the window is still safe (the guard above) */
+    setTimeout(() => { if (!DRAWER.open) { bg.hidden = true; drawer.hidden = true; } }, 360);
   }
 }
 function renderDrawerBody() {
@@ -460,7 +463,10 @@ function renderGrafici(box) {
   box.innerHTML = '';
   const wrap = elHtml(`<div class="graphs-wrap"></div>`);
 
-  /* FIX v7 · panel bar: counter + "clear" (closes all) */
+  /* FIX v7 · panel bar: counter + "clear" (closes all)
+     ===== NEW v16.2 · + ⛶ full screen: the wrap becomes the fullscreen
+     element and this toolbar floats OVER the charts (sticky overlay, see
+     .graphs-wrap.fs in styles.css). Hidden while there is nothing to show. ===== */
   const bar = elHtml(`<div class="graphs-toolbar"><span class="graphs-count"></span></div>`);
   const btnAll = elHtml(`<button class="btn tiny" title="Closes all charts">🧹 clear</button>`);
   btnAll.addEventListener('click', () => {
@@ -469,7 +475,11 @@ function renderGrafici(box) {
     dock.refreshPanels(['grafici']);
   });
   bar.appendChild(btnAll);
+  const btnFs = elHtml(`<button class="btn tiny graphs-fs" title="Full screen — the toolbar overlays the charts (Esc exits)" aria-label="Toggle full screen">⛶ full screen</button>`);
+  btnFs.style.display = GRAPHS.items.length ? '' : 'none';   // nothing to magnify yet
+  bar.appendChild(btnFs);
   wrap.appendChild(bar);
+  setupFs(wrap, btnFs);
 
   if (!GRAPHS.items.length) {
     wrap.appendChild(elHtml(`<div class="graphs-empty">No charts yet. Run a program with <code>plt.show()</code> (Matplotlib) or <code>fig.show()</code> (Plotly) to see it here.</div>`));
@@ -616,27 +626,32 @@ function renderGioco(box) {
        fills the screen, the pad floats over its bottom edge and the meta
        bar becomes a translucent overlay. On phones it also asks the
        orientation to lock to landscape (best effort: iOS Safari refuses,
-       the help text invites a hand rotation). Esc / ⛶ exits. ===== */
-    setupGameFs(wrap);
+       the help text invites a hand rotation). Esc / ⛶ exits.
+       ===== CHANGED v16.2 · shared with the Charts panel: setupFs. ===== */
+    setupFs(wrap, wrap.querySelector('#gameFsBtn'), { landscape: true });
     attachGameInput(cv);
   }
   box.appendChild(wrap);
   requestAnimationFrame(() => { drawGameFrame(); if (GAME.focused) { const c = document.getElementById('gameCanvas'); if (c) c.focus(); } });
 }
 
-/* ===== NEW v16.1 · full screen for the Game panel =====
-   One document-level listener (installed once) keeps every #gameFsBtn in
-   sync with the real fullscreen state: the panel re-renders often (new
-   frame, tab switch) and must never accumulate listeners. */
-let _gameFsListenerOn = false;
-function setupGameFs(wrap) {
-  const btn = wrap.querySelector('#gameFsBtn');
-  if (!btn) return;
+/* ===== CHANGED v16.2 · setupGameFs → setupFs: the SAME helper now drives
+   the full screen of the Game panel AND of the Charts panel. The button is
+   marked data-fsbtn and its wrap data-fswrap, so ONE document-level
+   listener (installed once) keeps every button in sync with the real
+   fullscreen state: the panels re-render often (new frame, tab switch) and
+   must never accumulate listeners. In full screen the control bars float
+   OVER the content (.game-wrap.fs / .graphs-wrap.fs in styles.css). */
+let _fsListenerOn = false;
+function setupFs(wrap, btn, opts = {}) {
+  if (!wrap || !btn) return;
+  wrap.dataset.fswrap = '1';
+  btn.dataset.fsbtn = '1';
   const sync = () => {
     const on = document.fullscreenElement === wrap;
     wrap.classList.toggle('fs', on);
     btn.textContent = on ? '⤡ exit' : '⛶ full screen';
-    btn.setAttribute('aria-label', on ? 'Exit full screen' : 'Enter full screen (immersive mode)');
+    btn.setAttribute('aria-label', on ? 'Exit full screen' : (btn.title || 'Enter full screen'));
   };
   btn.addEventListener('click', async () => {
     try {
@@ -644,9 +659,9 @@ function setupGameFs(wrap) {
         await document.exitFullscreen();
       } else {
         await wrap.requestFullscreen();
-        /* landscape fills the phone: best effort, silently ignored where
-           unsupported (iOS Safari: the user rotates by hand) */
-        if (screen.orientation && typeof screen.orientation.lock === 'function') {
+        /* landscape fills the phone: best effort (Game only), silently
+           ignored where unsupported (iOS Safari: the user rotates by hand) */
+        if (opts.landscape && screen.orientation && typeof screen.orientation.lock === 'function') {
           screen.orientation.lock('landscape').catch(() => { });
         }
       }
@@ -654,12 +669,25 @@ function setupGameFs(wrap) {
       toast('⚠ Full screen is not available in this browser (or was blocked).', 'warn');
     }
   });
-  if (!_gameFsListenerOn) {
-    _gameFsListenerOn = true;
+  if (!_fsListenerOn) {
+    _fsListenerOn = true;
     document.addEventListener('fullscreenchange', () => {
-      document.querySelectorAll('#gameFsBtn').forEach(b => {
-        const w = b.closest('.game-wrap'); if (w) { w.classList.toggle('fs', document.fullscreenElement === w); b.textContent = document.fullscreenElement === w ? '⤡ exit' : '⛶ full screen'; }
+      const on = document.fullscreenElement;
+      document.querySelectorAll('[data-fsbtn]').forEach(b => {
+        const w = b.closest('[data-fswrap]');
+        if (!w) return;
+        const active = on === w;
+        w.classList.toggle('fs', active);
+        b.textContent = active ? '⤡ exit' : '⛶ full screen';
       });
+      /* Plotly figures must re-fit the new container size after the
+         fullscreen transition (Matplotlib PNGs scale on their own via
+         max-width). The small delay lets the new layout settle first. */
+      setTimeout(() => {
+        if (window.Plotly) document.querySelectorAll('.plotly-div[data-rendered]').forEach(el => {
+          try { Plotly.Plots.resize(el); } catch (e) { }
+        });
+      }, 240);
     });
   }
   sync();
@@ -801,7 +829,7 @@ function openExercise(id) {
   S.current = id; saveProgress();
   S.hintsOpen = {};
   if (isMobile()) { dock.setMobileTab('esercizio'); dock.renderMobilePanel(); dock.renderMobileNav(); dock.renderMobileHead(); }
-  else dock.refreshPanels(['esercizio', 'traccia', 'console', 'progressi', 'codice', 'righe']);   // ===== CHANGED v16 · moduli is a drawer now, not a dock tab =====
+  else dock.refreshPanels(['esercizio', 'console', 'progressi', 'codice', 'righe']);   // ===== CHANGED v16 · moduli is a drawer now, not a dock tab — v16.2: traccia is gone too (the statement lives in the Exercise panel) =====
   if (DRAWER.open) toggleDrawer(false);   // ===== CHANGED v16 · picking an exercise closes the drawer (both modes: its backdrop blocks the work area) =====
   renderStatus();
 }
@@ -1445,7 +1473,15 @@ function renderEsercizio(box) {
       <span class="muted" style="font-size:0.6875rem;margin-left:6px">${Math.min(doneCount, e.steps.length)}/${e.steps.length} steps</span></div>
   </div>`));
   wrap.appendChild(elHtml(`<details class="ex-statement" ${doneCount === 0 ? 'open' : ''}>
-    <summary>📖 Exercise statement (from the book)</summary><div class="body">${e.tr}</div></details>`));
+    <summary>📖 Exercise statement (from the book)</summary>
+    <div class="body">${e.tr}</div>
+    <!-- ===== NEW v16.2 · chapter concepts: they lived in the removed
+         Walkthrough panel; now they sit right under the statement, so the
+         Exercise tab is self-contained (statement + concepts + steps). ===== -->
+    <div class="concepts ex-concepts" aria-label="Chapter ${e.ch} concepts">
+      <span class="concepts-lbl">Ch. ${e.ch} concepts</span>
+      ${CH[e.ch - 1].concepts.map(x => `<span class="chip">${esc(x)}</span>`).join('')}
+    </div></details>`));
   for (let i = 0; i < Math.min(doneCount, e.steps.length); i++) {
     const s = e.steps[i];
     const d = elHtml(`<details class="step-done">
@@ -2543,21 +2579,12 @@ function renderModuli(box, inDrawer) {
   box.innerHTML = ''; box.appendChild(wrap);
 }
 
-/* ---------- WALKTHROUGH panel ---------- */
-function renderTraccia(box) {
-  const e = EX[S.current] || EX[ORDER[0]];
-  const c = CH[e.ch - 1];
-  const wrap = elHtml(`<div>
-    <h2 class="pan-title">${icon('book')} Walkthrough · ${esc(e.id)} ${esc(e.t)}</h2>
-    <p class="pan-sub">"${esc(e.orig)}" — Python Crash Course, 3rd ed.</p>
-    <div class="tr-body">${e.tr}</div>
-    <hr class="hr">
-    <h2 class="pan-title" style="font-size:0.8125rem">${icon('files')} Chapter ${c.n} concepts</h2>
-    <div class="concepts">${c.concepts.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</div>
-    <p class="pan-sub" style="margin-top:12px">${esc(c.sub)}</p>
-  </div>`);
-  box.innerHTML = ''; box.appendChild(wrap);
-}
+/* ===== REMOVED v16.2 · the WALKTHROUGH panel (renderTraccia). It was a
+   duplicate of what the Exercise panel already shows: the statement from
+   the book is the "📖 Exercise statement" details and the chapter
+   concepts are the chips right under it (moved here in v16.2). One tab
+   less in the activity bar, in the mobile bar and in the default
+   layout — and one body less to render on startup. ===== */
 
 /* ---------- CONSOLE panel ---------- */
 function renderConsole(box) {
@@ -2667,7 +2694,7 @@ function renderGuida(box) {
       <p>· The <b>☰ Modules</b> tree (199 exercises) is a <b>slide-out menu</b> on the left: open it from the first icon of the activity bar — or from ☰ in the header on a phone — pick an exercise, and it closes by itself.</p>
       <p>· The <b>icons on the left bar are toggles</b>: click the icon of the panel you are looking at and the panel <b>closes</b>; click again and it comes back. The × on each tab does the same.</p>
       <p>· This <b>Guide</b> is an overlay: it never takes space away from the code.</p>
-      <p>· On a phone, the bottom bar holds the five tabs you use between two taps; everything else is in the <b>⋯ More</b> menu.</p>
+      <p>· On a phone, the bottom bar holds the four tabs you use between two taps; everything else is in the <b>⋯ More</b> menu.</p>
     </div>
     <div class="guide-sec">
       <h3>⌨ The Code editor, in full</h3>
@@ -2681,7 +2708,7 @@ function renderGuida(box) {
     </div>
     <div class="guide-sec">
       <h3>🖼 Charts and games</h3>
-      <p>When you run a program with <code>plt.show()</code> (Matplotlib) or <code>fig.show()</code> (Plotly), the chart appears in the <b>Charts</b> panel. When you use <code>pygame.display.flip()</code>, the frame appears in the <b>Game</b> panel. Both panels have their own icon in the left bar (new in v16): closing them no longer hides them forever.</p>
+      <p>When you run a program with <code>plt.show()</code> (Matplotlib) or <code>fig.show()</code> (Plotly), the chart appears in the <b>Charts</b> panel. When you use <code>pygame.display.flip()</code>, the frame appears in the <b>Game</b> panel. Both panels have their own icon in the left bar (new in v16): closing them no longer hides them forever. Both also have a <b>⛶ full screen</b> button: the screen fills with the chart or the game, the controls float <b>over</b> it and <span class="kbd">Esc</span> brings everything back.</p>
       <p><b>Note</b>: the first use of Matplotlib or Pygame downloads the package (~10-30 MB), then it stays in the browser cache.</p>
       <p><b>How Pygame runs in the browser — now it's playable</b>: games run on software surfaces in the runtime and the frames appear in the <b>Game</b> panel. <b>Click the canvas</b> (it captures the keyboard) and use <b>arrows</b>, <b>space</b>, <b>q</b>; the mouse passes to the game too. <b>On a phone</b> the on-screen pad below the canvas drives the game (◀ ▲ ▼ ▶, fire, q). The game keeps running until you press <b>■ Stop</b> or quit with <code>q</code>; after 25 s of complete inactivity the tutor closes it on its own, and there is an absolute limit of 10 minutes. For full performance run locally with <code>pip install pygame-ce</code>.</p>
     </div>
@@ -2894,23 +2921,19 @@ function mobileHeadHtml() {
 
 /* ---------- default layout and panel registry ---------- */
 function defaultLayout() {
-  /* ===== CHANGED v16 · no more left column: the Modules tree moved to
-       the slide-out drawer and the Guide to the overlay, so the work
-       area starts full-width. Layout (unchanged otherwise):
-         ┌────────────┬──────────────┐
-         │ Walkthrough│   Exercise   │  70%
-         ├────────────┴───┬──────────┤
-         │ Console Charts │  Code    │  30%
-         │ Game Progress  │  Lines   │
-         └────────────────┴──────────┘ ===== */
+  /* ===== CHANGED v16.2 · no more left column: the Modules tree moved to
+       the slide-out drawer, the Guide to the overlay, and the Walkthrough
+       tab is GONE (its content lives inside the Exercise panel), so the
+       exercise starts full-width. Layout (unchanged otherwise):
+         ┌────────────────────────────┐
+         │          Exercise           │  70%
+         ├───────────────┬────────────┤
+         │ Console Charts │   Code     │  30%
+         │ Game  Progress │   Lines    │
+         └───────────────┴────────────┘ ===== */
   return {
     type: 'split', dir: 'col', sizes: [70, 30], children: [
-      {
-        type: 'split', dir: 'row', sizes: [33, 67], children: [
-          { type: 'group', tabs: ['traccia'], active: 'traccia' },
-          { type: 'group', tabs: ['esercizio'], active: 'esercizio' }
-        ]
-      },
+      { type: 'group', tabs: ['esercizio'], active: 'esercizio' },
       {   // ===== MODIFIED v12 · the editors (⌨ full Code + ✎ Lines) in a
           // separate tab, split from the Console/Charts/Game: they open and
           // close on their own (activity bar) without covering the output =====
@@ -2923,7 +2946,9 @@ function defaultLayout() {
   };
 }
 const Panels = {
-  traccia: { id: 'traccia', title: 'Walkthrough', icon: 'book', render: renderTraccia },
+  /* ===== REMOVED v16.2 · 'traccia' (Walkthrough): the statement and the
+     chapter concepts are inside the Exercise panel — and the dock strips
+     it from layouts saved by older versions (unknown pid → tab dropped). ===== */
   esercizio: { id: 'esercizio', title: 'Exercise', icon: 'code', render: renderEsercizio },
   codice: { id: 'codice', title: 'Code', icon: 'filecode', render: renderCodice },   // ===== NEW v10 · full program editor + terminal =====
   righe:  { id: 'righe',  title: 'Lines',  icon: 'rows',    render: renderRighe },    // ===== NEW v12 · lightweight editor: only the exercise lines =====

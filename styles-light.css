@@ -1,0 +1,472 @@
+/* ============================================================
+   TUTOR · styles-light.css — TEST-ONLY light theme (v16.2)
+   ------------------------------------------------------------
+   Questo file NON fa parte del tema principale del progetto: è un
+   tema chiaro "user friendly" da usare come prova (bordi più
+   arrotondati, colori più chiari, superfici morbide).
+
+   HOW TO TEST (two equivalent ways — pick one):
+   1) REPLACE the stylesheet in index.html:
+        <link rel="stylesheet" href="styles.css?v=16.2">
+      becomes
+        <link rel="stylesheet" href="styles-light.css">
+   2) or ADD it right AFTER the main one (it only overrides):
+        <link rel="stylesheet" href="styles.css?v=16.2">
+        <link rel="stylesheet" href="styles-light.css">
+      (remove line 2 to go back to the dark theme)
+
+   It imports the main stylesheet and re-decorates it: every layout
+   rule, every component size and all the behaviour (drawer, overlay,
+   full screen, mobile) come from styles.css — only colors, shadows
+   and radii change here. The two deliberately DARK survivors:
+   · the Console / terminal (a terminal is expected to be dark, and
+     its output colors are tuned for it);
+   · the immersive Game stage and the full-screen scrims (a game
+     screen is black in any theme).
+
+   Optional: for a coherent browser UI on a phone also change the
+   meta theme-color in index.html from #17181c to #eef1f6.
+   ============================================================ */
+
+@import url("styles.css?v=16.2");
+
+/* ---------- 1 · palette ---------- */
+:root {
+  color-scheme: light;
+  --bg: #eef1f6;
+  --bg2: #f6f8fb;
+  --panel: #ffffff;
+  --panel2: #f2f5f9;
+  --panel3: #e9edf4;
+  --border: #d8dfe9;
+  --border2: #c3cddb;
+  --text: #232a36;
+  --dim: #4d586b;
+  --faint: #5d6a80;
+  --acc: #2563eb;
+  --acc-soft: rgba(37, 99, 235, .10);
+  --acc-line: rgba(37, 99, 235, .45);
+  --ok: #15803d;
+  --ok-soft: rgba(21, 128, 61, .12);
+  --warn: #92400e;
+  --warn-soft: rgba(146, 64, 14, .10);
+  --err: #d1242f;
+  --err-soft: rgba(209, 36, 47, .10);
+  --purple: #7c3aed;
+  --yellow: #9a6700;
+  --cyan: #0e7490;
+  /* bordi arrotondati: il raggio base passa da 9 a 14 px */
+  --rad: 14px;
+}
+
+/* ---------- 2 · base ---------- */
+body {
+  background: var(--bg)
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c2cbd8;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a9b4c5;
+  background-clip: padding-box
+}
+
+::selection {
+  background: rgba(37, 99, 235, .18)
+}
+
+/* ---------- 3 · chrome: titlebar, activity bar, statusbar, mobile ---------- */
+.titlebar {
+  background: #fbfcfe;
+  border-bottom: 1px solid #e3e8f0
+}
+
+.activitybar {
+  background: #f7f9fc;
+  border-right: 1px solid #e3e8f0
+}
+
+.statusbar {
+  background: #fbfcfe;
+  border-top: 1px solid #e3e8f0
+}
+
+.m-head {
+  background: #ffffff;
+  border-bottom: 1px solid #e3e8f0
+}
+
+.m-nav {
+  background: #ffffff;
+  border-top: 1px solid #e3e8f0
+}
+
+/* dock: la barra delle tab e i gruppi su superfici chiare */
+.dk-tabs {
+  background: #eef1f7
+}
+
+.dk-ghost {
+  box-shadow: 0 8px 30px rgba(23, 32, 54, .18)
+}
+
+/* ---------- 4 · componenti comuni: raggi e superfici ---------- */
+.tl-btn {
+  border-radius: 9px
+}
+
+.act-btn {
+  border-radius: 10px
+}
+
+.searchbox {
+  border-radius: 9px
+}
+
+.btn {
+  border-radius: 10px
+}
+
+.btn.primary {
+  color: #ffffff
+}
+
+.btn.primary:hover {
+  background: #1d4ed8
+}
+
+.btn.tiny {
+  border-radius: 8px
+}
+
+.dk-tab {
+  border-radius: 9px 9px 0 0
+}
+
+.tree-ch-head,
+.tree-ex {
+  border-radius: 9px
+}
+
+.road-item {
+  border-radius: 8px
+}
+
+/* chip colorati: le tinte rgba scure diventano tinte chiare */
+.chip.purple {
+  background: rgba(124, 58, 237, .10)
+}
+
+.chip.cy {
+  background: rgba(14, 116, 144, .10)
+}
+
+.sb-chip.pkg {
+  background: rgba(14, 116, 144, .10)
+}
+
+/* ---------- 5 · exercise: statement, passi, hint ---------- */
+.step-cur {
+  box-shadow: 0 4px 18px rgba(23, 32, 54, .10)
+}
+
+.kw:hover {
+  background: rgba(37, 99, 235, .08)
+}
+
+.hint-card {
+  border-color: rgba(124, 58, 237, .30);
+  border-radius: 12px;
+  background: rgba(124, 58, 237, .06)
+}
+
+.hint-card .hint-cta {
+  border-color: rgba(124, 58, 237, .30);
+  border-radius: 9px
+}
+
+.hint-card .hint-cta:hover {
+  background: rgba(124, 58, 237, .12)
+}
+
+.kw.used {
+  border-bottom-color: rgba(124, 58, 237, .5)
+}
+
+.note {
+  border-radius: 0 10px 10px 0
+}
+
+/* ---------- 6 · editor e aree di input (chiarissime) ---------- */
+.code-area {
+  background: #ffffff;
+  border-radius: 13px
+}
+
+.cl .ln {
+  color: #98a2b3
+}
+
+.cl .cd {
+  color: #1f2733
+}
+
+.code-input {
+  color: #1f2733
+}
+
+.reflect-box textarea {
+  background: #ffffff;
+  border-radius: 12px
+}
+
+.field input {
+  background: #ffffff;
+  border-radius: 9px
+}
+
+.input-modal-field {
+  background: #ffffff;
+  border-radius: 9px
+}
+
+.codice-ta {
+  background: #ffffff;
+  color: #1f2733;
+  border-radius: 13px
+}
+
+.sandbox-ta {
+  background: #ffffff;
+  color: #1f2733;
+  border-radius: 13px
+}
+
+.sandbox-samples button {
+  border-radius: 13px
+}
+
+.codice-tabs button {
+  border-radius: 9px
+}
+
+/* blocchi di codice dentro passi completati e hint */
+.step-done pre {
+  background: #f6f8fb;
+  border-radius: 9px
+}
+
+.ex-final pre {
+  background: #f6f8fb;
+  border-radius: 10px
+}
+
+.hint-card code.syn {
+  background: #faf5ff;
+  border-radius: 9px;
+  color: #6b21a8
+}
+
+/* sintassi Python su fondo chiaro */
+.py-k { color: #a626a4 }
+.py-s { color: #50a14f }
+.py-c { color: #697586 }
+.py-n { color: #986801 }
+.py-b { color: #0184bc }
+.py-f { color: #3568c9 }
+
+/* ---------- 7 · console / terminale: resta scuro (è un terminale) ---------- */
+.console-box {
+  background: #1c2230;
+  border-radius: 13px
+}
+
+.console-head {
+  background: #232b3b
+}
+
+.codice-out {
+  background: #1c2230;
+  border-radius: 13px
+}
+
+.console-out .run-block {
+  border-bottom-color: rgba(255, 255, 255, .10)
+}
+
+.console-out .sim-out {
+  color: #a8b3c7
+}
+
+.console-out details.run-tb summary,
+.console-out details.run-tb summary::before {
+  color: #c99b6e
+}
+
+.console-out details.run-tb pre {
+  color: #d3999b
+}
+
+#sbOut {
+  background: #1c2230 !important
+}
+
+/* ---------- 8 · grafici ---------- */
+.graph-card {
+  background: #ffffff;
+  border-radius: 12px
+}
+
+.graph-card-head {
+  background: #f4f6fa
+}
+
+.graph-card-body {
+  border-radius: 0 0 12px 12px
+}
+
+.graph-close {
+  border-radius: 7px
+}
+
+.graph-close:hover {
+  border-color: #d1242f;
+  background: rgba(209, 36, 47, .08);
+  color: #d1242f
+}
+
+.plotly-err {
+  background: #ffffff
+}
+
+/* in full screen la scrim resta scura (vedi styles.css): ok in entrambi
+   i temi — le pillole glassy sono pensate per stare sopra la scrim */
+
+/* ---------- 9 · gioco: pad chiaro, stage e full screen restano scuri ---------- */
+.game-canvas {
+  border-radius: 10px
+}
+
+.game-pad {
+  background: linear-gradient(#ffffff, #eef1f7)
+}
+
+.gp {
+  border-radius: 18px;
+  background: linear-gradient(#ffffff, #e9edf4);
+  border-color: #c3cddb;
+  box-shadow: 0 3px 0 #b9c2d2;
+  color: #232a36
+}
+
+.gp-fire {
+  border-radius: 20px;
+  background: linear-gradient(#dbeafe, #bfd9f8);
+  border-color: #93b8ec;
+  color: #1e4fbb
+}
+
+.gp-q {
+  border-radius: 16px
+}
+
+/* ---------- 10 · drawer, overlay, modali, toast, menu mobile ---------- */
+.drawer {
+  box-shadow: 24px 0 70px rgba(23, 32, 54, .25);
+  border-radius: 0 22px 22px 0
+}
+
+.drawer-search input {
+  background: #ffffff;
+  border-radius: 10px
+}
+
+.drawer-x {
+  border-radius: 10px
+}
+
+.drawer-bg {
+  background: rgba(15, 23, 42, .42)
+}
+
+.ovl {
+  border-radius: 18px;
+  box-shadow: 0 30px 90px rgba(15, 23, 42, .30)
+}
+
+.ovl-bg {
+  background: rgba(15, 23, 42, .45)
+}
+
+.ovl-x {
+  border-radius: 10px
+}
+
+.modal {
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, .28)
+}
+
+.modal-bg {
+  background: rgba(15, 23, 42, .45)
+}
+
+.toast {
+  border-radius: 12px;
+  box-shadow: 0 10px 34px rgba(15, 23, 42, .22)
+}
+
+.m-more-menu {
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, .22)
+}
+
+.m-nav button {
+  border-radius: 12px
+}
+
+/* mobile: i fogli (guide overlay, modali) arrotondano solo in alto */
+@media (max-width:768px) {
+  .modal {
+    border-radius: 18px 18px 0 0
+  }
+
+  .ovl {
+    border-radius: 18px 18px 0 0
+  }
+
+  .drawer {
+    border-radius: 0 22px 22px 0
+  }
+}
+
+/* ---------- 11 · dettagli ---------- */
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, .45) }
+  55% { box-shadow: 0 0 0 5px rgba(37, 99, 235, 0) }
+}
+
+.tbl-ex td {
+  border-bottom-color: rgba(216, 223, 233, .9)
+}
+
+.console-out .run-block.sol {
+  border-left-color: #8b5cf6;
+  background: rgba(139, 92, 246, .07)
+}
+
+/* ---------- 12 · alto contrasto (preferenza OS) in versione chiara ---------- */
+@media (prefers-contrast: more) {
+  :root {
+    --border: #b7c2d2;
+    --border2: #9fadc2;
+    --dim: #3c4759;
+    --faint: #4a566b;
+    --text: #171d27
+  }
+}

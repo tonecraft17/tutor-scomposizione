@@ -29,7 +29,7 @@ study an exercise → break it down into steps → write the lines → really ru
 | Charts | `matplotlib` (PNG via the AGG backend), `plotly` 2.35 (via micropip + native numpy/pandas) |
 | Tests | `pytest` executed in the in-browser runtime |
 | Network | `requests` + `pyodide-http` (browser fetch) for the ch. 17 APIs |
-| Frontend | **vanilla JavaScript** in **ES modules** (zero frameworks, zero build step), custom CSS (dark theme, VS Code-style dock layout, dedicated mobile view) |
+| Frontend | **vanilla JavaScript** in **ES modules** (zero frameworks, zero build step), custom CSS (dark theme, VS Code-style dock layout, dedicated mobile view) — plus `styles-light.css`, an optional light test theme (v16.2) |
 | Storage | **localStorage** (progress, layout) + **IndexedDB** (local solutions database: per-chapter bundles from `data/solutions/`, seeded on first use of each chapter — v14) |
 | Cloud (optional) | Supabase (progress sync across devices) — see [Optional configuration](#optional-configuration-supabase) |
 | Dev tests | Node.js ≥ 18 (`node test_*.mjs`, no dependencies to install) |
@@ -103,6 +103,7 @@ Go to **<http://localhost:8000>**. On the first Python command the browser downl
 tutor-scomposizione/
 ├── index.html                  # single page: dock, activity bar, mobile view
 ├── styles.css                  # dark theme, dock layout, panels, mobile
+├── styles-light.css            # TEST-ONLY light theme (rounded, lighter colors) — not part of the main project (v16.2)
 ├── app.js                      # the application: panels, ✎/⌨ editors, bridge, execution
 ├── serve.py                    # dev server (caching disabled) — recommended
 ├── config.js                   # CDN endpoints, runtime constants, localStorage keys
@@ -141,7 +142,7 @@ tutor-scomposizione/
 ├── test_input_pygame.html      # manual page: Pygame game input
 ├── test_runtime_plotly.html    # manual page: Plotly runtime
 │
-├── CHANGELOG-v5.md … CHANGELOG-v16.1.md # the full version history
+├── CHANGELOG-v5.md … CHANGELOG-v16.2.md # the full version history
 ├── README.md                   # this file
 ├── LICENSE                     # MIT
 └── .gitignore

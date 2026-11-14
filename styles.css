@@ -1106,6 +1106,24 @@ details>summary::-webkit-details-marker {
   color: var(--yellow)
 }
 
+/* ===== NEW v16.2 · chapter concepts inside the Exercise statement: they
+   moved here from the removed Walkthrough panel, so the Exercise tab is
+   self-contained (statement + concepts + steps). ===== */
+.ex-statement .concepts {
+  margin-top: 4px;
+  padding: 0 15px 14px
+}
+
+.ex-statement .concepts .concepts-lbl {
+  font-size: 0.65625rem;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--faint);
+  align-self: center;
+  margin-right: 2px
+}
+
 /* passi */
 .step-done {
   border: 1px solid var(--border);
@@ -2554,7 +2572,8 @@ textarea:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  height: 100%
+  height: 100%;
+  position: relative   /* v16.2 · anchor for the overlay toolbar in .fs */
 }
 
 .graphs-empty {
@@ -2637,6 +2656,50 @@ figure.graph-card {
   font-size: 0.625rem;
   color: var(--faint);
   font-family: var(--mono)
+}
+
+/* ===== NEW v16.2 · Charts panel full screen (toggled by setupFs in
+   app.js while .graphs-wrap is the fullscreen element): the toolbar
+   (count, 🧹 clear, ⛶ full screen) becomes a STICKY OVERLAY that floats
+   OVER the charts and follows the scroll — the same immersive treatment
+   as the meta bar of the Game panel. The wrap itself becomes the scroll
+   container, the cards keep their frame and the first row of charts
+   starts under the translucent toolbar. ===== */
+.graphs-wrap.fs {
+  background: #0b0c10;
+  gap: 12px;
+  padding: 0 14px 14px;
+  overflow: auto
+}
+
+.graphs-wrap.fs .graphs-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 0 -14px;
+  padding: 10px 14px 12px;
+  background: linear-gradient(rgba(8, 9, 13, .93), rgba(8, 9, 13, .55) 70%, rgba(8, 9, 13, 0))
+}
+
+/* glassy pills, readable over the scrim and over the white charts below */
+.graphs-wrap.fs .graphs-toolbar .btn {
+  background: rgba(255, 255, 255, .13);
+  border-color: rgba(255, 255, 255, .3);
+  color: #f2f4f8;
+  backdrop-filter: blur(5px)
+}
+
+.graphs-wrap.fs .graphs-toolbar .btn:hover {
+  background: rgba(255, 255, 255, .22);
+  border-color: rgba(255, 255, 255, .48)
+}
+
+.graphs-wrap.fs .graphs-toolbar .graphs-count {
+  color: #c6ccd8
+}
+
+.graphs-wrap.fs .graph-card {
+  background: #101216
 }
 
 /* FIX v7 · close ✕ of the single chart in the card header */
@@ -3174,15 +3237,25 @@ figure.graph-card {
   z-index: 1001;
   background: var(--panel);
   border-right: 1px solid var(--border2);
+  border-radius: 0 20px 20px 0;   /* v16.2 · bubble look: soft right corners */
   box-shadow: 24px 0 70px rgba(0, 0, 0, .45);
   display: flex;
   flex-direction: column;
-  transform: translateX(-103%);
-  transition: transform .26s cubic-bezier(.2, .8, .25, 1)
+  transform-origin: left center;
+  /* ===== CHANGED v16.2 · bubble animation: while closed the drawer is
+     slightly SQUASHED (scale .96, hugging the sidebar); opening springs
+     in with a soft overshoot — it pops like a soap bubble. Closing keeps
+     a quick, sober curve. The transition of the DESTINATION state is the
+     one that runs: the springy curve lives in the .open rule below, this
+     base curve only plays on the way out. ===== */
+  transform: translateX(-103%) scale(.96);
+  transition: transform .3s cubic-bezier(.5, 0, .75, .4)
 }
 
 #drawerHost.open .drawer {
-  transform: none
+  transform: none;
+  /* v16.2 · the bubble pop: past-1 overshoot on both translate and scale */
+  transition: transform .55s cubic-bezier(.2, 1.35, .3, 1)
 }
 
 .drawer-head {
