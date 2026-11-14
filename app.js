@@ -68,6 +68,138 @@ function modal(html, okLabel) {
 }
 
 /* ============================================================
+   ===== NEW v16 · MODULES DRAWER + GUIDE OVERLAY =====
+   ------------------------------------------------------------
+   Two pieces of app chrome replace the old dock tabs:
+   · the Modules tree lives in a DRAWER that slides in from the
+     left (activity-bar icon on desktop, ☰ in the mobile header):
+     the 199-exercise tree no longer eats a permanent slice of
+     the work area, and on the phone it is a real slide-out menu;
+   · the Guide opens as a floating OVERLAY (activity-bar icon,
+     "? Guide" in the titlebar, ? in the mobile header): it is
+     reference material you read occasionally, not a panel to
+     keep docked.
+   Both close with Esc, with the backdrop or with their ✕, and
+   return the focus to the invoker (same a11y pattern as modal()).
+   ============================================================ */
+const DRAWER = { open: false, invoker: null };
+function drawerEls() {
+  let host = document.getElementById('drawerHost');
+  if (!host) { host = document.createElement('div'); host.id = 'drawerHost'; document.body.appendChild(host); }
+  if (!host.firstChild) {
+    host.innerHTML =
+      `<div class="drawer-bg" hidden></div>
+       <aside class="drawer" role="complementary" aria-label="Modules and exercises" hidden>
+         <div class="drawer-head">
+           <span class="drawer-title">${icon('files')} Modules · Python Crash Course</span>
+           <button class="drawer-x" aria-label="Close the modules menu">✕</button>
+         </div>
+         <div class="drawer-search">
+           <input type="search" id="drawerSearch" placeholder="Filter exercises… (e.g. «3-4» or «guests»)"
+             aria-label="Filter exercises" autocomplete="off">
+         </div>
+         <div class="drawer-body"></div>
+         <div class="drawer-foot">Click an exercise to open it — the drawer closes by itself.</div>
+       </aside>`;
+    host.querySelector('.drawer-x').addEventListener('click', () => toggleDrawer(false));
+    host.querySelector('.drawer-bg').addEventListener('click', () => toggleDrawer(false));
+    /* the drawer has its OWN search box: on mobile there is no titlebar
+       search at all, so the filter finally works on phones too */
+    host.querySelector('#drawerSearch').addEventListener('input', ev => {
+      S.filter = ev.target.value.trim();
+      renderDrawerBody();
+      const gs = document.getElementById('globalSearch');
+      if (gs && document.activeElement !== gs) gs.value = ev.target.value;
+    });
+  }
+  return { host, drawer: host.querySelector('.drawer'), bg: host.querySelector('.drawer-bg'), body: host.querySelector('.drawer-body'), search: host.querySelector('#drawerSearch') };
+}
+function drawerKey(ev) { if (ev.key === 'Escape') { ev.stopPropagation(); toggleDrawer(false); } }
+function toggleDrawer(open) {
+  const { host, drawer, bg, search } = drawerEls();
+  const want = open === undefined ? !DRAWER.open : !!open;
+  if (want === DRAWER.open) return;
+  DRAWER.open = want;
+  const ab = document.querySelector('.act-btn[data-panel="moduli"]');
+  if (want) {
+    DRAWER.invoker = document.activeElement;
+    bg.hidden = false; drawer.hidden = false;
+    if (search) search.value = S.filter || '';
+    renderDrawerBody();
+    requestAnimationFrame(() => host.classList.add('open'));
+    document.addEventListener('keydown', drawerKey, true);
+    if (ab) ab.classList.add('active');
+    const x = drawer.querySelector('.drawer-x'); if (x) x.focus();
+  } else {
+    host.classList.remove('open');
+    document.removeEventListener('keydown', drawerKey, true);
+    if (DRAWER.invoker && DRAWER.invoker.isConnected) { try { DRAWER.invoker.focus(); } catch (e) { } }
+    if (ab) ab.classList.remove('active');
+    setTimeout(() => { if (!DRAWER.open) { bg.hidden = true; drawer.hidden = true; } }, 280);
+  }
+}
+function renderDrawerBody() {
+  const { body } = drawerEls(); if (!body) return;
+  renderModuli(body, true);   // v16 · same renderer as the old panel, without the duplicated header
+  decorateA11y(body);
+}
+
+const OVL = { open: false, invoker: null };
+function overlayEls() {
+  let host = document.getElementById('overlayHost');
+  if (!host) { host = document.createElement('div'); host.id = 'overlayHost'; document.body.appendChild(host); }
+  if (!host.firstChild) {
+    host.innerHTML =
+      `<div class="ovl-bg" hidden></div>
+       <div class="ovl" role="dialog" aria-modal="true" aria-labelledby="ovlTitle" hidden>
+         <div class="ovl-head">
+           <span class="ovl-title" id="ovlTitle">${icon('help')} Guide · how the Tutor works</span>
+           <button class="ovl-x" aria-label="Close the guide">✕</button>
+         </div>
+         <div class="ovl-body"></div>
+       </div>`;
+    host.querySelector('.ovl-x').addEventListener('click', () => toggleGuida(false));
+    host.querySelector('.ovl-bg').addEventListener('click', () => toggleGuida(false));
+  }
+  return { host, ovl: host.querySelector('.ovl'), bg: host.querySelector('.ovl-bg'), body: host.querySelector('.ovl-body') };
+}
+function ovlKey(ev) {
+  if (ev.key === 'Escape') { ev.stopPropagation(); toggleGuida(false); return; }
+  /* a11y (same pattern as modal()): Tab stays trapped inside the overlay */
+  if (ev.key === 'Tab') {
+    const { ovl } = overlayEls();
+    const f = [...ovl.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el => !el.disabled && el.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
+    else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+  }
+}
+function toggleGuida(open) {
+  const { host, ovl, bg, body } = overlayEls();
+  const want = open === undefined ? !OVL.open : !!open;
+  if (want === OVL.open) return;
+  OVL.open = want;
+  const ab = document.querySelector('.act-btn[data-panel="guida"]');
+  if (want) {
+    OVL.invoker = document.activeElement;
+    bg.hidden = false; ovl.hidden = false;
+    renderGuida(body);
+    decorateA11y(body);
+    requestAnimationFrame(() => host.classList.add('open'));
+    document.addEventListener('keydown', ovlKey, true);
+    if (ab) ab.classList.add('active');
+    const x = ovl.querySelector('.ovl-x'); if (x) x.focus();
+  } else {
+    host.classList.remove('open');
+    document.removeEventListener('keydown', ovlKey, true);
+    if (OVL.invoker && OVL.invoker.isConnected) { try { OVL.invoker.focus(); } catch (e) { } }
+    if (ab) ab.classList.remove('active');
+    setTimeout(() => { if (!OVL.open) { bg.hidden = true; ovl.hidden = true; } }, 240);
+  }
+}
+
+/* ============================================================
    ===== NEW · INPUT MODAL for input() of Python code =====
    When the code executed in the worker calls input(), the worker uses
    js.prompt() — which works, but it's ugly. This would be a more
@@ -252,7 +384,9 @@ onPygameFrame(({ buf, b64, w, h, gw, gh }) => {
        the remaining space (CSS max-height). */
     if (dock.ensurePanelSpace) dock.ensurePanelSpace('gioco', 420);
     dock.refreshPanels(['gioco']);     // after the widening the canvas must be recreated
-    toast('🎮 Game started: click the canvas in the <b>Game</b> panel (it captures the keyboard) and play with arrows/space/q. Press <b>■ Stop</b> to close it.', '');
+    toast(isMobile()
+      ? '🎮 Game started: play with the <b>on-screen pad</b> under the canvas. ■ Stop closes it.'
+      : '🎮 Game started: click the canvas in the <b>Game</b> panel (it captures the keyboard) and play with arrows/space/q. Press <b>■ Stop</b> to close it.', '');
     if (isMobile()) { dock.setMobileTab('gioco'); dock.renderMobilePanel(); dock.renderMobileNav(); }
   }
   // draws without rebuilding the panel (keyboard focus stays on the canvas)
@@ -274,6 +408,10 @@ function updateGameMeta() {
     : 'last frame: ' + new Date(GAME.meta.ts).toLocaleTimeString('en-GB');
   const btn = el.querySelector('#gameStopBtn');
   if (btn) btn.style.display = GAME.active ? '' : 'none';
+  /* ===== NEW v16 · on a phone there is no keyboard: the on-screen pad
+     appears while the game runs and disappears when it ends. ===== */
+  const pad = document.getElementById('gamePad');
+  if (pad) pad.hidden = !GAME.active;
 }
 function drawGameFrame() {
   const canvas = document.getElementById('gameCanvas');
@@ -378,6 +516,50 @@ function renderGrafici(box) {
     });
   });
 }
+/* ===== NEW v16 · on-screen game pad (mobile) =====
+   A phone has no keyboard: without these buttons the games were
+   watchable but not playable. The pad sends the SAME KEYDOWN/KEYUP
+   events the canvas keyboard handler sends (pygame constants), so the
+   runtime sees no difference. It only mounts on mobile and is visible
+   while GAME.active (updateGameMeta toggles it). */
+function buildGamePad() {
+  const pad = elHtml(`<div class="game-pad" id="gamePad" hidden>
+    <div class="gp-dpad" role="group" aria-label="Directional pad">
+      <span></span><button class="gp" data-key="K_UP" aria-label="Up">▲</button><span></span>
+      <button class="gp" data-key="K_LEFT" aria-label="Left">◀</button>
+      <button class="gp" data-key="K_DOWN" aria-label="Down">▼</button>
+      <button class="gp" data-key="K_RIGHT" aria-label="Right">▶</button>
+    </div>
+    <div class="gp-side">
+      <button class="gp gp-wide" data-key="K_SPACE" aria-label="Space / fire">␣ fire</button>
+      <button class="gp" data-key="K_q" aria-label="Quit the game (q key)">q</button>
+    </div>
+  </div>`);
+  pad.querySelectorAll('button.gp').forEach(b => {
+    const key = b.dataset.key;
+    const ch = key === 'K_q' ? 'q' : '';
+    const down = ev => {
+      ev.preventDefault();
+      if (!GAME.active) return;
+      b.classList.add('on');
+      sendPygameEvent({ t: 'KEYDOWN', key, ch });
+    };
+    const up = ev => {
+      if (ev.cancelable) ev.preventDefault();
+      b.classList.remove('on');
+      sendPygameEvent({ t: 'KEYUP', key });
+    };
+    /* pointer events (not touch events): one code path for touch, pen
+       and mouse; pointerleave/cancel release the key even if the finger
+       slides off the button */
+    b.addEventListener('pointerdown', down);
+    b.addEventListener('pointerup', up);
+    b.addEventListener('pointercancel', up);
+    b.addEventListener('pointerleave', up);
+    b.addEventListener('contextmenu', ev => ev.preventDefault());
+  });
+  return pad;
+}
 function renderGioco(box) {
   box.innerHTML = '';
   const wrap = elHtml(`<div class="game-wrap"></div>`);
@@ -398,7 +580,12 @@ function renderGioco(box) {
       title="Click here, then use arrows / space / q">Your browser cannot render the game canvas.</canvas>`);
     stage.appendChild(cv);
     wrap.appendChild(stage);
-    wrap.appendChild(elHtml(`<div class="game-help">🖱 Click the canvas to activate the keyboard: <span class="kbd">←</span><span class="kbd">→</span><span class="kbd">↑</span><span class="kbd">↓</span> move, <span class="kbd">space</span> shoots, <span class="kbd">q</span> exits. The mouse passes straight to the game.</div>`));
+    /* ===== NEW v16 · on-screen controls on mobile: a phone has no
+       keyboard, so the game was not playable there. ===== */
+    if (isMobile()) wrap.appendChild(buildGamePad());
+    wrap.appendChild(elHtml(`<div class="game-help">${isMobile()
+      ? '📱 Tap the canvas or use the <b>on-screen pad</b> below it: ◀ ▲ ▼ ▶ move · ␣ fire · q quits. ■ Stop closes the game.'
+      : '🖱 Click the canvas to activate the keyboard: <span class="kbd">←</span><span class="kbd">→</span><span class="kbd">↑</span><span class="kbd">↓</span> move, <span class="kbd">space</span> shoots, <span class="kbd">q</span> exits. The mouse passes straight to the game.'}</div>`));
     const stopBtn = wrap.querySelector('#gameStopBtn');
     stopBtn.style.display = GAME.active ? '' : 'none';
     stopBtn.addEventListener('click', () => { stopPygameGame(); toast('Game close requested…', ''); });
@@ -544,7 +731,8 @@ function openExercise(id) {
   S.current = id; saveProgress();
   S.hintsOpen = {};
   if (isMobile()) { dock.setMobileTab('esercizio'); dock.renderMobilePanel(); dock.renderMobileNav(); dock.renderMobileHead(); }
-  else dock.refreshPanels(['esercizio', 'traccia', 'console', 'moduli', 'progressi', 'codice', 'righe']);   // ===== MODIFIED v12 · also the lightweight Lines editor =====
+  else dock.refreshPanels(['esercizio', 'traccia', 'console', 'progressi', 'codice', 'righe']);   // ===== CHANGED v16 · moduli is a drawer now, not a dock tab =====
+  if (DRAWER.open) toggleDrawer(false);   // ===== CHANGED v16 · picking an exercise closes the drawer (both modes: its backdrop blocks the work area) =====
   renderStatus();
 }
 function fileSafe(id) { return 'es_' + id.replace(/[-.]/g, '_'); }
@@ -609,7 +797,8 @@ function advance(e, idx, userLines) {
     toast(`✓ Step ${idx + 1} passed${used === 0 ? ' — fully on your own!' : ''}`, 'ok');
   }
   saveProgress();
-  dock.refreshPanels(['esercizio', 'console', 'moduli', 'progressi', 'codice', 'righe']);   // ===== MODIFIED v12 · also the lightweight Lines editor =====
+  dock.refreshPanels(['esercizio', 'console', 'progressi', 'codice', 'righe']);   // ===== CHANGED v16 · moduli is a drawer now, not a dock tab =====
+  if (DRAWER.open) renderDrawerBody();
   renderStatus(); if (isMobile()) dock.renderMobileHead();
   setTimeout(() => {
     const c = document.getElementById('stepCard');
@@ -2035,12 +2224,18 @@ function renderCodice(box) {
   const st = exState(e.id);
   if (!S.codiceFile) S.codiceFile = {};
   const wrap = elHtml(`<div class="codice-wrap"></div>`);
+  /* ===== CHANGED v16 · UX: this used to be a 3-line wall of text that
+     repeated on every exercise ("This is the program that ▶ Run actually
+     runs. Feel free to modify it: from that moment… Terminal: Ctrl+Enter…").
+     It is now ONE short line per mode; the full explanation lives in the
+     Guide overlay (the "? how it works" link opens it). ===== */
   wrap.appendChild(elHtml(`<div>
     <h2 class="pan-title">${icon('filecode')} Full code · ${esc(e.id)} ${esc(e.t)}</h2>
-    <p class="pan-sub codice-sub" style="margin-bottom:8px">This is <b>the program that "▶ Run and check the output" actually runs</b>. Feel free to modify it: from that moment the Run button — here and in the Exercise panel — will run <b>your version</b>, to reach the same result in a different way. Terminal: <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> runs and the output appears below.</p>
+    <p class="pan-sub codice-sub" style="margin-bottom:8px">The program that <b>▶ Run</b> executes — edit it freely: Run will use <b>your version</b>. <button class="sub-link" data-guide type="button" title="The full explanation, in the Guide">? how it works</button></p>
     <div class="codice-headrow"><span class="chip ok" id="codiceBadge"></span>
       <button class="btn tiny" id="cdToRighe" title="Lightweight editor: only the lines of your exercise (\"Exercise completed\"), with the ⚙ bridge to the project's modules">✎ only the exercise lines</button></div>
   </div>`));
+  wrap.addEventListener('click', ev => { const g = ev.target.closest('[data-guide]'); if (g) toggleGuida(true); });   // ===== NEW v16 · guide link =====
   const loading = elHtml(`<div class="codice-loading">… preparing the full program (local database)…</div>`);
   wrap.appendChild(loading);
   box.appendChild(wrap);
@@ -2055,13 +2250,13 @@ function renderCodice(box) {
     loading.remove();
     if (snap.modo === 'sol') {
       wrap.querySelector('.codice-sub').innerHTML =
-        `The steps of this exercise are <b>fragments of a larger program</b>: what "▶ Run and check the output" actually runs is the <b>full program below</b> — all the project's files, <b>from the initial imports to the end</b>. Modify any file (e.g. a speed in <code>settings.py</code>) and press ▶ run: the game/program will start <b>with your edits</b>. Terminal: <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span>.`;
+        `Fragments of a larger program: ▶ Run executes the <b>full project below</b> — edit any file, run with your changes. <button class="sub-link" data-guide type="button" title="The full explanation, in the Guide">? how it works</button>`;
     } else if (snap.modo === 'files') {
       wrap.querySelector('.codice-sub').innerHTML =
-        `This exercise is <b>multi-file</b>: "▶ Run and check the output" runs <b>your files</b> (one per tab, from the main to the last module). Feel free to modify them: from that moment the Run button will run <b>your versions</b>. Terminal: <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> runs and the output appears below.`;
+        `Multi-file exercise: ▶ Run executes <b>your files</b>, one per tab. <button class="sub-link" data-guide type="button" title="The full explanation, in the Guide">? how it works</button>`;
     } else if (snap.supporto.length) {
       wrap.querySelector('.codice-sub').innerHTML =
-        `This is <b>the program that "▶ Run and check the output" actually runs</b>: the lines of the passed steps (with the prerequisite base), plus the imported <b>support modules</b> (last tabs). Modify whatever you want: the Run button will run <b>your version</b>. Terminal: <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> runs and the output appears below.`;
+        `▶ Run executes this program: your passed steps + the imported <b>support modules</b> (last tabs). <button class="sub-link" data-guide type="button" title="The full explanation, in the Guide">? how it works</button>`;
     }
     const multi = snap.modo === 'sol' || snap.modo === 'files' || !!snap.supporto.length;
     /* --- file tabs: main (▶) + project files / support modules --- */
@@ -2174,9 +2369,9 @@ function renderCodice(box) {
   if (cdToRighe) cdToRighe.addEventListener('click', () => apriRighe());
 }
 
-/* ---------- MODULES panel ---------- */
-function renderModuli(box) {
-  const wrap = elHtml(`<div><h2 class="pan-title">${icon('files')} Modules · Python Crash Course</h2>
+/* ---------- MODULES (v16 · rendered inside the side drawer) ---------- */
+function renderModuli(box, inDrawer) {
+  const wrap = elHtml(inDrawer ? `<div></div>` : `<div><h2 class="pan-title">${icon('files')} Modules · Python Crash Course</h2>
     <p class="pan-sub">Exercises from Chapters 1–20 + Appendices D–E. Click an exercise to open it.</p></div>`);
   const tree = elHtml(`<div class="tree"></div>`);
   CH.forEach(c => {
@@ -2341,7 +2536,7 @@ function renderProgressi(box) {
   box.innerHTML = ''; box.appendChild(wrap);
 }
 
-/* ---------- GUIDE panel ---------- */
+/* ---------- GUIDE (v16 · rendered inside the overlay) ---------- */
 function renderGuida(box) {
   box.innerHTML = '';
   box.appendChild(elHtml(`<div>
@@ -2360,25 +2555,35 @@ function renderGuida(box) {
       <p>The blue <b>keywords</b> are clickable: <b>first click</b> = concept, <b>second click</b> = syntax, <b>full hint</b> = the whole line.</p>
     </div>
     <div class="guide-sec">
-      <h3>🖼 Charts and games (new)</h3>
-      <p>When you run a program with <code>plt.show()</code> (Matplotlib) or <code>fig.show()</code> (Plotly), the chart appears in the <b>Charts</b> panel. When you use <code>pygame.display.flip()</code>, the frame appears in the <b>Game</b> panel.</p>
-      <p><b>Note</b>: the first use of Matplotlib or Pygame downloads the package (~10-30 MB), then it stays in the browser cache.</p>
-      <p><b>How Pygame runs in the browser — now it's playable</b>: games run on software surfaces in the runtime and the frames appear in the <b>Game</b> panel. <b>Click the canvas</b> (it captures the keyboard) and use <b>arrows</b>, <b>space</b>, <b>q</b>; the mouse passes to the game too. The game keeps running until you press <b>■ Stop</b> or quit with <code>q</code>; after 25 s of complete inactivity the tutor closes it on its own, and there is an absolute limit of 10 minutes. For full performance run locally with <code>pip install pygame-ce</code>.</p>
+      <h3>🧭 Finding your way around <span class="chip acc" style="font-size:.59375rem">new in v16</span></h3>
+      <p>· The <b>☰ Modules</b> tree (199 exercises) is a <b>slide-out menu</b> on the left: open it from the first icon of the activity bar — or from ☰ in the header on a phone — pick an exercise, and it closes by itself.</p>
+      <p>· The <b>icons on the left bar are toggles</b>: click the icon of the panel you are looking at and the panel <b>closes</b>; click again and it comes back. The × on each tab does the same.</p>
+      <p>· This <b>Guide</b> is an overlay: it never takes space away from the code.</p>
+      <p>· On a phone, the bottom bar holds the five tabs you use between two taps; everything else is in the <b>⋯ More</b> menu.</p>
     </div>
     <div class="guide-sec">
-      <h3>🧰 Solutions database (new)</h3>
+      <h3>⌨ The Code editor, in full</h3>
+      <p>The <b>⌨ code</b> button next to "▶ Run" opens the exercise's <b>full program</b> — exactly the code the Run button sends to the runtime. One line under the title tells you which program you are looking at; the details are these:</p>
+      <p>· You can <b>modify it</b> freely: from that moment "Run and check the output" runs <b>your version</b> (marked ⚠, saved with your progress) — so you can reach the same result <b>in a different way</b> than the predetermined solution. The soft output check stays active: if your program prints the expected lines, the "✓" arrives.</p>
+      <p>· The panel works as a <b>terminal</b>: <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> runs, the output appears below with the <code>student@tutor:~$</code> prompt and the blinking cursor; the full history stays in the Console panel.</p>
+      <p>· <b>Fragments of a larger program</b> (the ch. 12–14 games, class extensions…): the steps are pieces of a whole project. The editor shows <b>all the files</b>, from the initial imports to the end, and ▶ Run always executes the <b>full project</b> — with your edits, file by file (e.g. change a speed in <code>settings.py</code> and the game starts with it).</p>
+      <p>· <b>Multi-file exercises</b>: one tab per file, from the main to the last module; ▶ Run executes <b>your files</b>.</p>
+      <p>· <b>Support modules</b> (read-only project files from the local database) sit in the last tabs: they run together with your program, you don't rewrite them.</p>
+      <p>· <b>⟲ restore original</b> discards the edits and goes back to the program of the passed steps. If you don't touch anything, the run always follows the last passed step.</p>
+    </div>
+    <div class="guide-sec">
+      <h3>🖼 Charts and games</h3>
+      <p>When you run a program with <code>plt.show()</code> (Matplotlib) or <code>fig.show()</code> (Plotly), the chart appears in the <b>Charts</b> panel. When you use <code>pygame.display.flip()</code>, the frame appears in the <b>Game</b> panel. Both panels have their own icon in the left bar (new in v16): closing them no longer hides them forever.</p>
+      <p><b>Note</b>: the first use of Matplotlib or Pygame downloads the package (~10-30 MB), then it stays in the browser cache.</p>
+      <p><b>How Pygame runs in the browser — now it's playable</b>: games run on software surfaces in the runtime and the frames appear in the <b>Game</b> panel. <b>Click the canvas</b> (it captures the keyboard) and use <b>arrows</b>, <b>space</b>, <b>q</b>; the mouse passes to the game too. <b>On a phone</b> the on-screen pad below the canvas drives the game (◀ ▲ ▼ ▶, fire, q). The game keeps running until you press <b>■ Stop</b> or quit with <code>q</code>; after 25 s of complete inactivity the tutor closes it on its own, and there is an absolute limit of 10 minutes. For full performance run locally with <code>pip install pygame-ce</code>.</p>
+    </div>
+    <div class="guide-sec">
+      <h3>🧰 Solutions database</h3>
       <p>The official book solution files are archived in a <b>database in the browser</b> (IndexedDB), seeded on first launch. They are used in two ways:</p>
       <p>· <b>Support files</b>: imported modules (<code>restaurant.py</code>…), data (<code>learning_python.txt</code>, weather CSVs…), images of the Pygame projects. Listed in the exercise banner, you use them with <code>import</code> or <code>Path(...)</code> without rewriting them.</p>
       <p>· <b>Double run</b>: if your code produces no output (because it only defines classes/functions or depends on other files), the <b>full solution</b> is run automatically and its output appears in the Console marked with <b>📚</b>. The solution's code is never shown: only its output.</p>
       <p>· <b>pytest tests</b>: the solutions of the testing chapters run with integrated pytest (output "1 passed"…).</p>
       <p>· <b>Django and Git projects</b> (Ch. 18–22): the files are archived but not runnable in the browser — you need Python and Django locally.</p>
-    </div>
-    <div class="guide-sec">
-      <h3>⌨ Full code editor (new)</h3>
-      <p>The <b>⌨ code</b> button next to "▶ Run" opens the exercise's <b>full program</b> — exactly the code the Run button sends to the runtime: the lines of the passed steps (with any prerequisite base), file by file in multi-file exercises.</p>
-      <p>· You can <b>modify it</b> freely: from that moment "Run and check the output" runs <b>your version</b> (marked ⚠, saved with your progress) — so you can reach the same result <b>in a different way</b> than the predetermined solution. The soft output check stays active: if your program prints the expected lines, the "✓" arrives.</p>
-      <p>· The panel works as a <b>terminal</b>: <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> runs, the output appears below with the <code>student@tutor:~$</code> prompt and the blinking cursor; the full history stays in the Console panel.</p>
-      <p>· <b>⟲ restore original</b> discards the edits and goes back to the program of the passed steps. If you don't touch anything, the run always follows the last passed step.</p>
     </div>
     <div class="guide-sec">
       <h3>📊 Syntactic autonomy</h3>
@@ -2572,38 +2777,44 @@ function mobileHeadHtml() {
       <div class="t">${esc(e.id)} · ${esc(e.t)}</div>
       <div class="s">${st.done ? 'completed ✓' : 'step ' + Math.min(st.solved + 1, e.steps.length) + ' of ' + e.steps.length}</div>
     </div>
+    <!-- ===== CHANGED v16 · the ☰ drawer and the ? guide overlay replace the
+         old flat tab bar entries (they were always-visible tabs before) ===== -->
+    <button class="tl-btn" data-mact="moduli" title="Modules and exercises (slide-out menu)" aria-label="Open the modules menu" style="padding:5px 9px">☰</button>
+    <button class="tl-btn" data-mact="guida" title="How the method works (overlay)" aria-label="Open the guide" style="padding:5px 9px">?</button>
     <button class="tl-btn" data-mact="account" title="Account and sync" style="padding:5px 9px">${sync === 'synced' ? '☁ ✓' : '☁'}</button>`;
 }
 
 /* ---------- default layout and panel registry ---------- */
 function defaultLayout() {
-  const sb = window.innerWidth < 1200 ? 26 : 19;
+  /* ===== CHANGED v16 · no more left column: the Modules tree moved to
+       the slide-out drawer and the Guide to the overlay, so the work
+       area starts full-width. Layout (unchanged otherwise):
+         ┌────────────┬──────────────┐
+         │ Walkthrough│   Exercise   │  70%
+         ├────────────┴───┬──────────┤
+         │ Console Charts │  Code    │  30%
+         │ Game Progress  │  Lines   │
+         └────────────────┴──────────┘ ===== */
   return {
-    type: 'split', dir: 'row', sizes: [sb, 100 - sb], children: [
-      { type: 'group', tabs: ['moduli', 'guida'], active: 'moduli' },
+    type: 'split', dir: 'col', sizes: [70, 30], children: [
       {
-        type: 'split', dir: 'col', sizes: [70, 30], children: [
-          {
-            type: 'split', dir: 'row', sizes: [33, 67], children: [
-              { type: 'group', tabs: ['traccia'], active: 'traccia' },
-              { type: 'group', tabs: ['esercizio'], active: 'esercizio' }
-            ]
-          },
-          {   // ===== MODIFIED v12 · the editors (⌨ full Code + ✎ Lines) in a
-              // separate tab, split from the Console/Charts/Game: they open and
-              // close on their own (activity bar) without covering the output =====
-            type: 'split', dir: 'row', sizes: [55, 45], children: [
-              { type: 'group', tabs: ['console', 'grafici', 'gioco', 'progressi'], active: 'console' },
-              { type: 'group', tabs: ['codice', 'righe'], active: 'codice' }
-            ]
-          }
+        type: 'split', dir: 'row', sizes: [33, 67], children: [
+          { type: 'group', tabs: ['traccia'], active: 'traccia' },
+          { type: 'group', tabs: ['esercizio'], active: 'esercizio' }
+        ]
+      },
+      {   // ===== MODIFIED v12 · the editors (⌨ full Code + ✎ Lines) in a
+          // separate tab, split from the Console/Charts/Game: they open and
+          // close on their own (activity bar) without covering the output =====
+        type: 'split', dir: 'row', sizes: [55, 45], children: [
+          { type: 'group', tabs: ['console', 'grafici', 'gioco', 'progressi'], active: 'console' },
+          { type: 'group', tabs: ['codice', 'righe'], active: 'codice' }
         ]
       }
     ]
   };
 }
 const Panels = {
-  moduli: { id: 'moduli', title: 'Modules', icon: 'files', render: renderModuli },
   traccia: { id: 'traccia', title: 'Walkthrough', icon: 'book', render: renderTraccia },
   esercizio: { id: 'esercizio', title: 'Exercise', icon: 'code', render: renderEsercizio },
   codice: { id: 'codice', title: 'Code', icon: 'filecode', render: renderCodice },   // ===== NEW v10 · full program editor + terminal =====
@@ -2612,9 +2823,12 @@ const Panels = {
   grafici: { id: 'grafici', title: 'Charts', icon: 'chart', render: renderGrafici },   // ===== NEW =====
   gioco: { id: 'gioco', title: 'Game', icon: 'flask', render: renderGioco },     // ===== NEW =====
   progressi: { id: 'progressi', title: 'Progress', icon: 'chart', render: renderProgressi },
-  guida: { id: 'guida', title: 'Guide', icon: 'help', render: renderGuida },
   sandbox: { id: 'sandbox', title: 'Sandbox', icon: 'flask', render: renderSandbox },
   account: { id: 'account', title: 'Account', icon: 'user', render: renderAccount },
+  /* ===== CHANGED v16 · 'moduli' and 'guida' are NOT dock panels anymore:
+     the Modules tree renders inside the side drawer (renderDrawerBody)
+     and the Guide inside the overlay (toggleGuida). Their activity-bar
+     icons survive as special triggers — see specialPanels below. ===== */
 };
 
 /* ============================================================
@@ -2667,6 +2881,10 @@ const dock = createDock({
   storageKey: KEYS.layout,
   toast,
   mobileHead: mobileHeadHtml,
+  /* ===== NEW v16 · the two special activity-bar icons do not insert a
+     dock tab: they open the Modules drawer and the Guide overlay. ===== */
+  specialPanels: { moduli: true, guida: true },
+  onSpecial: pid => { if (pid === 'moduli') toggleDrawer(); else if (pid === 'guida') toggleGuida(); },
   onLayoutChange: () => { renderStatus(); },
 });
 
@@ -2724,12 +2942,21 @@ function init() {
     toast('☁ Progress updated ' + (st.viaRealtime ? 'in real time' : 'from the cloud') + '.', 'ok');
   });
   const gs = $('#globalSearch');
-  if (gs) gs.addEventListener('input', ev => { S.filter = ev.target.value.trim(); dock.refreshPanels(['moduli']); });
+  /* ===== CHANGED v16 · the Modules tree is a drawer: typing a filter
+     opens it (there is nothing to filter behind it anymore) and keeps
+     it in sync; the drawer's own search box feeds the same S.filter. ===== */
+  if (gs) gs.addEventListener('input', ev => {
+    S.filter = ev.target.value.trim();
+    if (!isMobile()) { if (S.filter && !DRAWER.open) toggleDrawer(true); else if (DRAWER.open) renderDrawerBody(); }
+    const ds = document.getElementById('drawerSearch');
+    if (ds && document.activeElement !== ds) ds.value = ev.target.value;
+  });
   $('#btnReset').addEventListener('click', async () => {
     const ok = await modal('<h3>Restore the prototype?</h3><p>Panel layout and progress will go back to the initial state.</p>', 'Restore');
     if (ok) resetAll();
   });
-  $('#btnGuida').addEventListener('click', () => dock.activateOrInsert('guida'));
+  /* ===== CHANGED v16 · the Guide is an overlay, not a dock tab ===== */
+  $('#btnGuida').addEventListener('click', () => toggleGuida());
   $('#statusbar').addEventListener('click', ev => {
     const t = ev.target.closest('[data-act]'); if (!t) return;
     if (isMobile()) { dock.setMobileTab(t.dataset.act); dock.renderMobilePanel(); dock.renderMobileNav(); }
@@ -2746,17 +2973,29 @@ function init() {
   });
   $('#mHead').addEventListener('click', ev => {
     const t = ev.target.closest('[data-mact]'); if (!t) return;
-    if (t.dataset.mact === 'account') { dock.setMobileTab('account'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+    /* ===== CHANGED v16 · ☰ opens the Modules drawer and ? the Guide
+     overlay; the cloud button still switches to the Account tab. ===== */
+    if (t.dataset.mact === 'moduli') toggleDrawer();
+    else if (t.dataset.mact === 'guida') toggleGuida();
+    else if (t.dataset.mact === 'account') { dock.setMobileTab('account'); dock.renderMobilePanel(); dock.renderMobileNav(); }
   });
   let rzT = null;
   window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => dock.applyMode(false), 160); });
   if (!storage.getSeen()) {
-    setTimeout(() => toast('👋 Welcome! Open an exercise from the <b>Modules</b> panel.', ''), 800);
-    setTimeout(() => toast('The <b style="color:var(--acc)">blue words</b> in the phrases are clickable: they are your hints 🪂'), 5200);
-    setTimeout(() => toast('▶ The <b>Run</b> button runs the code with a real Python in the browser.', ''), 9600);
-    setTimeout(() => toast('🖼 Matplotlib/Plotly charts and 🎮 Pygame games appear in their dedicated panels!', ''), 14000);
-    setTimeout(() => toast('⌨ The <b>code</b> button next to Run shows the full program: you can modify it and run your version again.', ''), 18400);
-    setTimeout(() => toast('✎ The <b>lines</b> button opens the lightweight editor: only the exercise lines, with the reference to the module that contains them.', ''), 23000);
+    /* ===== CHANGED v16 · on a phone the six toast cascade over 23 s
+       felt like a pop-up storm: two compact ones are enough. Desktop
+       keeps the full tour, updated for the new UI. ===== */
+    if (isMobile()) {
+      setTimeout(() => toast('👋 Welcome! Tap <b>☰</b> to pick an exercise, <b>?</b> if you get lost.', ''), 800);
+      setTimeout(() => toast('The <b style="color:var(--acc)">blue words</b> are your hints 🪂 · ▶ <b>Run</b> executes real Python.', ''), 5200);
+    } else {
+      setTimeout(() => toast('👋 Welcome! Open an exercise from the <b>☰ Modules</b> menu on the left.', ''), 800);
+      setTimeout(() => toast('The <b style="color:var(--acc)">blue words</b> in the phrases are clickable: they are your hints 🪂'), 5200);
+      setTimeout(() => toast('▶ The <b>Run</b> button runs the code with a real Python in the browser.', ''), 9600);
+      setTimeout(() => toast('🖼 Matplotlib/Plotly charts and 🎮 Pygame games appear in their dedicated panels!', ''), 14000);
+      setTimeout(() => toast('⌨ The <b>code</b> button next to Run shows the full program: you can modify it and run your version again.', ''), 18400);
+      setTimeout(() => toast('✎ The <b>lines</b> button opens the lightweight editor: only the exercise lines, with the reference to the module that contains them.', ''), 23000);
+    }
     storage.setSeen();
   }
 }

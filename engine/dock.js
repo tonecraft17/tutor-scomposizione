@@ -42,24 +42,46 @@ export function createDock(opts){
   const toast     = opts.toast;
   const onLayoutChange = opts.onLayoutChange || (()=>{});
   const defaultLayout  = opts.defaultLayout;
+  /* ===== NEW v16 · special panels (Modules drawer, Guide overlay) =====
+     They are NOT dock tabs: their activity-bar icon does not insert a
+     panel into the split tree, it calls back the app (onSpecial), which
+     owns the drawer/overlay UI. This keeps engine/dock.js free of any
+     drawer/overlay knowledge. */
+  const specialPanels = opts.specialPanels || {};
+  const onSpecial = opts.onSpecial || (()=>{});
 
   const ACT = [
-    ['moduli',   'files', 'Modules & exercises'],
+    ['moduli',   'files', 'Modules & exercises'],     // v16 · opens the side drawer
     ['traccia',  'book',  'Exercise walkthrough'],
     ['esercizio','code',  'Active exercise'],
-    ['codice',   'filecode', 'Full code (editor + terminal)'],   // ===== NEW v10 =====
-    ['righe',    'rows',    'Exercise lines (light editor)'],    // ===== NEW v12 · only the exercise's lines, with the module reference that holds them =====
+    ['codice',   'filecode', 'Full code (editor + terminal)'],
+    ['righe',    'rows',    'Exercise lines (light editor)'],
     ['console',  'term',  'Output console'],
+    /* ===== NEW v16 · the Charts and Game panels had NO icon in the
+       activity bar: once their tab was closed there was no way back
+       (except running a new program). Now they are first-class citizens
+       of the left navigation bar, like every other panel. ===== */
+    ['grafici',  'chart', 'Charts (Matplotlib / Plotly)'],
+    ['gioco',    'flask', 'Game (Pygame)'],
     ['progressi','chart', 'Progress & autonomy'],
-    ['guida',    'help',  'Method guide'],
+    ['guida',    'help',  'Method guide'],             // v16 · opens the overlay
     ['sandbox',  'flask', 'Python sandbox (real runtime)'],
     ['account',  'user',  'Account & sync'],
   ];
-  const MOBILE_NAV = ['moduli','traccia','esercizio','codice','righe','console','progressi','guida'];   // ===== CHANGED v12 · «lines» too =====
-  const OPEN_ZONES = { moduli:'left', guida:'left', traccia:'left', esercizio:'right',
+  /* ===== CHANGED v16 · mobile tab management: the bottom bar keeps the
+     five tabs a phone actually uses between two taps (exercise, its
+     walkthrough, the console and the two media panels, which previously
+     were MISSING from the bar — a chart switched the tab and the student
+     had no button to come back or to see the charts again). Everything
+     else (editors, progress, sandbox, account) moves into the "⋯ More"
+     drop-up menu; Modules is the ☰ drawer and Guide the ? overlay, both
+     opened from the mobile header. ===== */
+  const MOBILE_MAIN = ['esercizio','traccia','console','grafici','gioco'];
+  const MOBILE_MORE = ['codice','righe','progressi','sandbox','account'];
+  const OPEN_ZONES = { traccia:'left', esercizio:'right',
                        codice:'bottom',                                                                    // ===== NEW v10 =====
                        righe:'bottom',                                                                     // ===== NEW v12 · the light editor opens in its own split (separate tab) =====
-                       console:'bottom', progressi:'bottom', sandbox:'bottom', account:'right' };
+                       console:'bottom', grafici:'bottom', gioco:'bottom', progressi:'bottom', sandbox:'bottom', account:'right' };
 
   let GIDSEQ=0, layout=null, DRAG=null, mobileTab='esercizio';
 
@@ -103,6 +125,14 @@ export function createDock(opts){
     if(!root) return;
     root.innerHTML = '';
     if(!layout) layout = loadLS(storageKey, null) || defaultLayout();
+    /* ===== NEW v16 · sanitize layouts saved by older versions: panels
+       that are no longer dock tabs (v15 saved 'moduli'/'guida' in the
+       left column) are stripped from the tree, so an upgrading user
+       keeps every other panel exactly where they had it. ===== */
+    walkGroups(layout, g=>{
+      g.tabs = g.tabs.filter(pid => panels[pid]);
+      if(!g.tabs.includes(g.active)) g.active = g.tabs[0] || null;
+    });
     layout = simplify(layout) || defaultLayout();
     root.appendChild(renderNode(layout));
     /* ===== CHANGED v15 · PERFORMANCE: panel bodies render PROGRESSIVELY.
@@ -363,11 +393,24 @@ export function createDock(opts){
       parent.children[i]={type:'split', dir, sizes:[50,50], children: before?[ng,targetGroup]:[targetGroup,ng]};
     }
   }
-  function closePanel(pid){
+  function closePanel(pid, silent){
     removePanelFromTree(pid);
     layout=simplify(layout);
     renderLayout(); saveLayoutSoon();
-    toast('Panel "'+panels[pid].title+'" closed: reopen it from the activity bar.','');
+    if(!silent) toast('Panel "'+panels[pid].title+'" closed: reopen it from the activity bar.','');
+  }
+
+  /* ===== NEW v16 · toggle from the activity bar =====
+     Clicking the icon of a panel that is ALREADY the visible tab of its
+     group closes it (second click = first click's undo); clicking the
+     icon of a visible-but-background tab activates it; a closed panel
+     opens as always. The × on the tab keeps its own (non-silent)
+     close + toast. ===== */
+  function togglePanel(pid){
+    if(isMobile()){ activateOrInsert(pid); return; }
+    const g=findGroupOf(layout, pid);
+    if(g && g.active===pid){ closePanel(pid, true); return; }
+    activateOrInsert(pid);
   }
 
   /* ---------- activity bar ---------- */
@@ -377,8 +420,9 @@ export function createDock(opts){
     ACT.forEach(([pid,ic,title],i)=>{
       // ===== CHANGED v10 · the separator follows the panel, not the index =====
       if(pid==='sandbox'){ const sep=document.createElement('div'); sep.className='act-sep'; bar.appendChild(sep); }
-      const b=elHtml(`<button class="act-btn" data-panel="${pid}" title="${esc(title)}">${icon(ic)}</button>`);
-      b.addEventListener('click', ()=>activateOrInsert(pid));
+      const special = specialPanels[pid];   // ===== NEW v16 · drawer / overlay triggers =====
+      const b=elHtml(`<button class="act-btn" data-panel="${pid}"${special?' data-special="1"':''} title="${esc(title)}" aria-label="${esc(title)}${special?' (opens a slide-out menu, not a dock tab)':''}">${icon(ic)}</button>`);
+      b.addEventListener('click', ()=>{ if(special){ onSpecial(pid); return; } togglePanel(pid); });   // ===== CHANGED v16 · toggle close + special panels =====
       bar.appendChild(b);
     });
     const sp=document.createElement('div'); sp.className='act-spacer'; bar.appendChild(sp);
@@ -440,7 +484,14 @@ export function createDock(opts){
   function updateActivityBar(){
     const actives=new Set(); walkGroups(layout, g=>{ if(g.active) actives.add(g.active); });
     if(mobileTab) actives.add(mobileTab);
-    document.querySelectorAll('.act-btn').forEach(b=>b.classList.toggle('active', actives.has(b.dataset.panel)));
+    document.querySelectorAll('.act-btn').forEach(b=>{
+      /* ===== CHANGED v16 · special buttons (drawer/overlay triggers) are
+         driven by the app that owns them, not by the dock tree — skip
+         them here or this pass would clear their active state right
+         after the app sets it. ===== */
+      if(b.dataset.special) return;
+      b.classList.toggle('active', actives.has(b.dataset.panel));
+    });
   }
 
   /* ---------- mobile view ---------- */
@@ -448,15 +499,50 @@ export function createDock(opts){
     const h=$('#mHead'); if(!h) return;
     h.innerHTML = mobileHead ? mobileHead() : '';
   }
+  /* ===== CHANGED v16 · the bottom bar shows the five primary tabs and
+     a "⋯ More" drop-up menu with the secondary ones; opening an item
+     switches to it, and the menu closes. Replaces the old flat list of
+     eight buttons that overflowed on small phones and lacked the
+     Charts/Game tabs entirely. ===== */
+  let moreOpen=false;
+  function closeMoreMenu(){
+    moreOpen=false;
+    const m=document.querySelector('#mNav .m-more-menu');
+    if(m) m.hidden=true;
+    const b=document.querySelector('#mNav .m-more-btn');
+    if(b) b.setAttribute('aria-expanded','false');
+  }
   function renderMobileNav(){
     const nav=$('#mNav'); if(!nav) return;
     nav.innerHTML='';
-    MOBILE_NAV.forEach(pid=>{
-      const p=panels[pid]; if(!p) return;
-      const b=elHtml(`<button class="${mobileTab===pid?'active':''}">${icon(p.icon)}<span>${esc(p.title)}</span></button>`);
+    moreOpen=false;
+    const btn=(pid)=>{
+      const p=panels[pid]; if(!p) return null;
+      const b=elHtml(`<button class="${mobileTab===pid?'active':''}" aria-current="${mobileTab===pid?'true':'false'}">${icon(p.icon)}<span>${esc(p.title)}</span></button>`);
       b.addEventListener('click', ()=>{ mobileTab=pid; renderMobileNav(); renderMobilePanel(); });
-      nav.appendChild(b);
+      return b;
+    };
+    MOBILE_MAIN.forEach(pid=>{ const b=btn(pid); if(b) nav.appendChild(b); });
+    /* --- ⋯ More drop-up menu --- */
+    const more=document.createElement('div'); more.className='m-more-wrap';
+    const moreBtn=elHtml(`<button class="m-more-btn${MOBILE_MORE.includes(mobileTab)?' active':''}" aria-haspopup="menu" aria-expanded="false" aria-label="More tabs">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg><span>More</span></button>`);
+    const menu=elHtml(`<div class="m-more-menu" role="menu" hidden></div>`);
+    MOBILE_MORE.forEach(pid=>{
+      const p=panels[pid]; if(!p) return;
+      const it=elHtml(`<button role="menuitem" class="${mobileTab===pid?'active':''}">${icon(p.icon)}<span>${esc(p.title)}</span></button>`);
+      it.addEventListener('click', ()=>{ mobileTab=pid; closeMoreMenu(); renderMobileNav(); renderMobilePanel(); });
+      menu.appendChild(it);
     });
+    moreBtn.addEventListener('click', ev=>{
+      ev.stopPropagation();
+      moreOpen=!moreOpen;
+      menu.hidden=!moreOpen;
+      moreBtn.setAttribute('aria-expanded', String(moreOpen));
+    });
+    more.appendChild(moreBtn); more.appendChild(menu); nav.appendChild(more);
+    /* outside tap closes the drop-up */
+    document.addEventListener('click', function onDoc(){ closeMoreMenu(); document.removeEventListener('click', onDoc); });
   }
   function renderMobilePanel(){
     const c=$('#mContent'); if(!c) return;
@@ -479,7 +565,7 @@ export function createDock(opts){
   /* ---------- public API ---------- */
   return {
     renderLayout, refreshPanels, refreshAll, renderActivity,
-    activateOrInsert, closePanel, updateActivityBar, applyMode, ensurePanelSpace,
+    activateOrInsert, closePanel, togglePanel, updateActivityBar, applyMode, ensurePanelSpace,
     renderMobile, renderMobileHead, renderMobileNav, renderMobilePanel,
     serializeLayout, saveLayoutSoon,
     findGroupOf: pid => findGroupOf(layout, pid),

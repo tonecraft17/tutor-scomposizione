@@ -3089,3 +3089,436 @@ figure.graph-card {
     outline-width: 3px
   }
 }
+
+/* ============================================================
+   ===== v16 · MODULES DRAWER + GUIDE OVERLAY + MOBILE TABS =====
+   ------------------------------------------------------------
+   New app chrome: the Modules tree slides in from the left (drawer),
+   the Guide floats above the work area (overlay), the mobile bar
+   gains five primary tabs + a "⋯ More" drop-up menu, the confirm
+   dialogs become bottom sheets on a phone, and the Game panel gets
+   an on-screen pad (a phone has no keyboard).
+   ============================================================ */
+
+/* the [hidden] attribute must always win over the display rules below,
+   or the closed drawer/overlay would stay painted */
+.drawer-bg[hidden],
+.drawer[hidden],
+.ovl-bg[hidden],
+.ovl[hidden] {
+  display: none
+}
+
+/* ---------- Modules drawer (side-sliding menu) ---------- */
+.drawer-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 9, 12, .55);
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity .24s
+}
+
+#drawerHost.open .drawer-bg {
+  opacity: 1
+}
+
+.drawer {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 348px;
+  max-width: 88vw;
+  z-index: 1001;
+  background: var(--panel);
+  border-right: 1px solid var(--border2);
+  box-shadow: 24px 0 70px rgba(0, 0, 0, .45);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-103%);
+  transition: transform .26s cubic-bezier(.2, .8, .25, 1)
+}
+
+#drawerHost.open .drawer {
+  transform: none
+}
+
+.drawer-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--border)
+}
+
+.drawer-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.drawer-title svg {
+  width: 17px;
+  height: 17px;
+  color: var(--acc);
+  flex: none
+}
+
+.drawer-x {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--faint);
+  font-size: 0.875rem
+}
+
+.drawer-x:hover {
+  color: var(--text);
+  background: var(--panel2)
+}
+
+.drawer-search {
+  flex: none;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border)
+}
+
+.drawer-search input {
+  width: 100%;
+  background: #141519;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-size: 0.78125rem;
+  color: var(--text);
+  outline: none
+}
+
+.drawer-search input:focus-visible {
+  border-color: var(--acc-line)
+}
+
+.drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 10px 14px
+}
+
+.drawer-foot {
+  flex: none;
+  padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px));
+  font-size: 0.65625rem;
+  color: var(--faint);
+  border-top: 1px solid var(--border)
+}
+
+/* ---------- Guide overlay ---------- */
+.ovl-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 9, 12, .62);
+  z-index: 1050;
+  opacity: 0;
+  transition: opacity .2s
+}
+
+#overlayHost.open .ovl-bg {
+  opacity: 1
+}
+
+.ovl {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 1051;
+  width: min(780px, calc(100vw - 44px));
+  max-height: min(84vh, 900px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .6);
+  opacity: 0;
+  transform: translate(-50%, -46.5%) scale(.985);
+  transition: opacity .2s, transform .2s
+}
+
+#overlayHost.open .ovl {
+  opacity: 1;
+  transform: translate(-50%, -50%)
+}
+
+.ovl-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border)
+}
+
+.ovl-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: var(--text)
+}
+
+.ovl-title svg {
+  width: 17px;
+  height: 17px;
+  color: var(--acc);
+  flex: none
+}
+
+.ovl-x {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--faint);
+  font-size: 0.875rem
+}
+
+.ovl-x:hover {
+  color: var(--text);
+  background: var(--panel2)
+}
+
+.ovl-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 18px 20px
+}
+
+/* link-styled button ("? how it works" in the Code panel) */
+.sub-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--acc);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer
+}
+
+.sub-link:hover {
+  color: var(--text)
+}
+
+/* ---------- mobile · "⋯ More" drop-up menu ---------- */
+.m-more-wrap {
+  flex: 1;
+  position: relative;
+  display: flex
+}
+
+.m-more-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border-radius: 9px;
+  font-size: 0.625rem;
+  color: var(--faint);
+  min-height: 48px
+}
+
+.m-more-btn svg {
+  width: 19px;
+  height: 19px
+}
+
+.m-more-btn.active {
+  color: var(--acc);
+  background: var(--acc-soft)
+}
+
+.m-more-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 6px;
+  min-width: 206px;
+  padding: 6px;
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
+  z-index: 950;
+  animation: hint-in .16s
+}
+
+.m-more-menu button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  color: var(--text);
+  text-align: left
+}
+
+.m-more-menu button svg {
+  width: 17px;
+  height: 17px;
+  color: var(--faint);
+  flex: none
+}
+
+.m-more-menu button.active {
+  background: var(--acc-soft);
+  color: var(--acc)
+}
+
+.m-more-menu button.active svg {
+  color: var(--acc)
+}
+
+/* ---------- mobile · on-screen game pad ---------- */
+.game-pad {
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  padding: 12px 10px 6px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none
+}
+
+.gp-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 47px);
+  grid-template-rows: repeat(2, 47px);
+  gap: 6px
+}
+
+.gp-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px
+}
+
+.gp {
+  min-width: 47px;
+  min-height: 47px;
+  border-radius: 12px;
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-size: 0.9375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none
+}
+
+.gp-wide {
+  min-width: 92px;
+  font-size: 0.78125rem;
+  font-weight: 600
+}
+
+.gp.on,
+.gp:active {
+  background: var(--acc-soft);
+  border-color: var(--acc-line);
+  color: var(--acc)
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(48px);
+    opacity: .3
+  }
+}
+
+/* ---------- v16 · mobile refinements ---------- */
+@media (max-width:768px) {
+
+  /* the confirm dialogs are no longer centered pop-ups: they slide up
+     from the bottom edge, like a native mobile action sheet. The scrim
+     is a touch stronger than on desktop: on a phone the sheet sits right
+     on top of tappable content. */
+  .modal-bg {
+    align-items: flex-end;
+    padding: 0;
+    background: rgba(8, 9, 12, .74)
+  }
+
+  .modal {
+    max-width: none;
+    border-radius: 15px 15px 0 0;
+    padding: 17px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    animation: sheet-in .22s ease-out
+  }
+
+  /* the Guide overlay becomes a sheet anchored to the bottom */
+  .ovl {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: auto;
+    max-width: none;
+    max-height: 88vh;
+    border-radius: 15px 15px 0 0;
+    border-bottom: none;
+    transform: translateY(103%);
+    opacity: 1
+  }
+
+  #overlayHost.open .ovl {
+    transform: none
+  }
+
+  /* the drawer covers most of the phone */
+  .drawer {
+    width: min(86vw, 348px)
+  }
+
+  /* the game canvas sits right above the on-screen pad, with no dead
+     space: the stage wraps the canvas instead of reserving half the
+     viewport, and the pad + help follow immediately */
+  .game-stage {
+    flex: 0 0 auto;
+    min-height: 0
+  }
+
+  .game-canvas {
+    max-height: 42vh
+  }
+}
+
+/* very small phones: icons only in the bottom bar (the labels return
+   inside the More menu, which has room for them) */
+@media (max-width:390px) {
+
+  .m-nav > button span,
+  .m-more-btn span {
+    display: none
+  }
+}
