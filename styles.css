@@ -901,11 +901,13 @@ details>summary::-webkit-details-marker {
   border-radius: 9px
 }
 
-.tree-roadmap h4 {
+/* a11y: heading level fixed — the roadmap title is now an h3 (it sat at
+   h4 directly under the h2 of the panel, skipping one level) */
+.tree-roadmap h3 {
   font-size: 0.71875rem;
   color: var(--faint);
   font-weight: 650;
-  margin-bottom: 7px;
+  margin: 0 0 7px;
   text-transform: uppercase;
   letter-spacing: .6px
 }
@@ -2460,6 +2462,21 @@ body.mobile .phrase {
 
 /* ---------- Accessibility ---------- */
 
+/* a11y: visually-hidden text (state of the tree rows, counters): read by
+   screen readers, invisible on screen (checklist module 4) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0
+}
+
 /* SC 2.4.7 · keyboard focus: a clearly visible ring on every interactive
    element (buttons, tabs, tree items, summaries, canvas, inputs) */
 :focus-visible {
@@ -2506,6 +2523,12 @@ textarea:focus-visible {
   text-align: center;
   border: 1px dashed var(--border);
   border-radius: 9px
+}
+
+/* a11y: <figure> reset — the chart card is a real figure/figcaption pair,
+   the browser default margin of figure must not break the grid */
+figure.graph-card {
+  margin: 0
 }
 
 .graph-card {

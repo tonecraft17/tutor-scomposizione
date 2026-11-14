@@ -28,14 +28,42 @@ function toast(msg, type) {
 }
 function modal(html, okLabel) {
   return new Promise(res => {
-    const bg = elHtml(`<div class="modal-bg"><div class="modal">${html}
+    /* ===== a11y (checklist M4) ===== the dialog remembers the invoker and
+       returns the focus to it on close; Tab is trapped inside the dialog
+       and Esc closes it (SC 2.1.1 + 2.4.3); role="dialog" + aria-modal
+       + aria-labelledby on the first heading give it its accessible name. */
+    const invoker = document.activeElement;
+    const bg = elHtml(`<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true">${html}
       <div class="acts"><button class="btn" data-r="0">Cancel</button>
       <button class="btn primary" data-r="1">${okLabel || 'Confirm'}</button></div></div></div>`);
+    const h = bg.querySelector('h1,h2,h3,h4,h5,h6');
+    if (h && !h.id) h.id = 'modalTitle';
+    if (h) bg.querySelector('.modal').setAttribute('aria-labelledby', h.id);
     $('#modalHost').appendChild(bg);
+    const focusables = () => [...bg.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')]
+      .filter(el => !el.disabled && el.offsetParent !== null);
+    const chiudi = ok => {
+      bg.remove();
+      document.removeEventListener('keydown', onKey, true);
+      if (invoker && invoker.isConnected) { try { invoker.focus(); } catch (err) { } }
+      res(ok);
+    };
+    const onKey = ev => {
+      if (ev.key === 'Escape') { ev.stopPropagation(); chiudi(false); return; }
+      if (ev.key === 'Tab') {
+        const f = focusables(); if (!f.length) return;
+        const first = f[0], last = f[f.length - 1];
+        if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
+        else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+        else if (!bg.contains(document.activeElement)) { ev.preventDefault(); first.focus(); }
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
     bg.addEventListener('click', ev => {
       const b = ev.target.closest('[data-r]'); if (!b) return;
-      bg.remove(); res(b.dataset.r === '1');
+      chiudi(b.dataset.r === '1');
     });
+    requestAnimationFrame(() => { const f = focusables(); if (f.length) f[0].focus(); });
   });
 }
 
@@ -303,13 +331,18 @@ function renderGrafici(box) {
         const tt = typeof item.fig.layout.title === 'string' ? item.fig.layout.title : item.fig.layout.title.text;
         if (tt) titolo = '📊 ' + String(tt).replace(/\s+/g, ' ').trim().slice(0, 46);
       }
-      const card = elHtml(`<div class="graph-card">
-        <div class="graph-card-head"><b>${esc(titolo)}</b><span class="badge">${t}</span>
-          <button class="graph-close" title="Close this chart">✕</button></div>
+      /* ===== a11y (checklist M2) ===== the chart card is a <figure> with its
+         header in <figcaption>; the Matplotlib PNG carries a descriptive
+         alt (~150 chars, date included); the Plotly container is announced
+         as an image with the chart title. */
+      const descAlt = `Matplotlib figure produced by the program at ${t}. It is the PNG image generated with plt.show(): the chart data is not exposed as text, run the program again to view it once more.`;
+      const card = elHtml(`<figure class="graph-card">
+        <figcaption class="graph-card-head"><b>${esc(titolo)}</b><span class="badge">${t}</span>
+          <button class="graph-close" title="Close this chart" aria-label="Close this chart">✕</button></figcaption>
         <div class="graph-card-body">${item.kind === 'plotly'
-          ? `<div id="${item.id}" class="plotly-div"></div>`
-          : `<img src="data:image/png;base64,${item.b64}" alt="matplotlib chart">`}</div>
-      </div>`);
+          ? `<div id="${item.id}" class="plotly-div" role="img" aria-label="${esc(titolo)} · interactive Plotly chart"></div>`
+          : `<img src="data:image/png;base64,${item.b64}" alt="${esc(descAlt)}">`}</div>
+      </figure>`);
       /* FIX v7 · closing the SINGLE chart */
       card.querySelector('.graph-close').addEventListener('click', () => closeGraph(item));
       wrap.appendChild(card);
@@ -357,7 +390,9 @@ function renderGioco(box) {
        remaining space and resizes (proportionally) instead of being
        cut off when the group is short. */
     const stage = elHtml(`<div class="game-stage"></div>`);
-    const cv = elHtml(`<canvas id="gameCanvas" class="game-canvas" tabindex="0" title="Click here, then use arrows / space / q"></canvas>`);
+    const cv = elHtml(`<canvas id="gameCanvas" class="game-canvas" tabindex="0" role="img" aria-describedby="gameMeta"
+      aria-label="Pygame game viewport: the frame drawn by your program. Click here, then play with arrows / space / q"
+      title="Click here, then use arrows / space / q">Your browser cannot render the game canvas.</canvas>`);
     stage.appendChild(cv);
     wrap.appendChild(stage);
     wrap.appendChild(elHtml(`<div class="game-help">🖱 Click the canvas to activate the keyboard: <span class="kbd">←</span><span class="kbd">→</span><span class="kbd">↑</span><span class="kbd">↓</span> move, <span class="kbd">space</span> shoots, <span class="kbd">q</span> exits. The mouse passes straight to the game.</div>`));
@@ -423,8 +458,10 @@ function hlRows(code, startAt) {
 function plainFrase(f) { return f.replace(/\{\{|\}\}/g, ''); }
 function fraseHtml(e, idx, f) {
   const h = S.hintsOpen[e.id + '::' + idx] || {};
+  /* ===== a11y (checklist M4) ===== the hint keywords behave as real
+     buttons: role + tabindex (they are activated by keyboard below). */
   return esc(f).replace(/\{\{(.+?)\}\}/g, (m, w) =>
-    `<span class="kw${h[w] ? ' used' : ''}" data-w="${esc(w)}">${esc(w)}</span>`);
+    `<span class="kw${h[w] ? ' used' : ''}" role="button" tabindex="0" data-w="${esc(w)}">${esc(w)}</span>`);
 }
 function bumpAssist(exId, idx, lvl) {
   const st = exState(exId);
@@ -489,7 +526,7 @@ function fullParachute(e, idx) {
       const card = elHtml(`<div class="hint-card" data-hint="__full__">
         <div class="hc-top"><span>🪂</span><b>full line</b><span class="lv">level 3 · hint</span></div>
         <code class="syn">${hlInline(s.c)}</code>
-        <p class="muted" style="margin-top:7px;font-size:11.5px">Transcribe it yourself in the editor below: the check stays active.</p></div>`);
+        <p class="muted" style="margin-top:7px;font-size:0.71875rem">Transcribe it yourself in the editor below: the check stays active.</p></div>`);
       const old = box.querySelector('[data-hint="__full__"]');
       if (old) old.remove();
       box.appendChild(card);
@@ -944,6 +981,7 @@ function stepCard(e, idx) {
     const row = elHtml(`<div class="code-input-row"><span class="ln">${prevLines.length + 1}</span></div>`);
     const ta = document.createElement('textarea');
     ta.className = 'code-input'; ta.spellcheck = false; ta.autocapitalize = 'off'; ta.autocomplete = 'off';
+    ta.setAttribute('aria-label', `Python code editor, step ${idx + 1} of ${e.steps.length} of exercise ${e.id}`);
     ta.rows = Math.max(2, nExp);
     ta.placeholder = nExp > 1 ? `write the ${nExp} Python lines for this step here…` : 'write the Python line for this step here…';
     ta.value = S.drafts[e.id + '::' + idx] || '';
@@ -956,14 +994,14 @@ function stepCard(e, idx) {
     const acts = elHtml(`<div class="step-actions">
       <button class="btn primary" title="Ctrl/Cmd+Enter">✓ Check</button>
       <button class="btn ghost" title="Show the full line (after an attempt!)">🪂 Full hint</button>
-      <span class="assist-line muted" style="font-size:10.5px">Ctrl+Enter to check</span>
+      <span class="assist-line muted" style="font-size:0.65625rem">Ctrl+Enter to check</span>
     </div>`);
     acts.querySelectorAll('button')[0].addEventListener('click', () => doVerify(e, idx, ta));
     acts.querySelectorAll('button')[1].addEventListener('click', () => fullParachute(e, idx));
     card.appendChild(acts);
     card.appendChild(elHtml(`<div class="step-msg" id="stepMsg"></div>`));
   } else if (s.ta) {
-    card.appendChild(elHtml(`<div class="reflect-box"><textarea id="refTa" placeholder="${esc(s.ta)}">${esc(exState(e.id).notes[idx] || '')}</textarea></div>`));
+    card.appendChild(elHtml(`<div class="reflect-box"><textarea id="refTa" aria-label="Written answer, step ${idx + 1} of ${e.steps.length}: ${esc(s.ta)}" placeholder="${esc(s.ta)}">${esc(exState(e.id).notes[idx] || '')}</textarea></div>`));
     const acts = elHtml(`<div class="step-actions"><button class="btn primary">✓ Confirm answer</button></div>`);
     acts.querySelector('button').addEventListener('click', () => confirmText(e, idx));
     card.appendChild(acts);
@@ -977,6 +1015,13 @@ function stepCard(e, idx) {
   card.addEventListener('click', ev => {
     const kw = ev.target.closest('.kw');
     if (kw) onKwClick(document.getElementById('hintArea'), e, idx, kw.dataset.w, kw);
+  });
+  /* ===== a11y (checklist M4) ===== the .kw keywords are real buttons:
+     Enter and Space activate them from the keyboard (SC 2.1.1). */
+  card.addEventListener('keydown', ev => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    const kw = ev.target.closest('.kw');
+    if (kw) { ev.preventDefault(); onKwClick(document.getElementById('hintArea'), e, idx, kw.dataset.w, kw); }
   });
   return card;
 }
@@ -1032,11 +1077,11 @@ function renderEsercizio(box) {
       const pst = exState(pid);
       const label = pex ? `${pid} · ${esc(pex.t)}` : `${pid} (not found)`;
       const stateIcon = pst.done ? '✓' : (pst.solved > 0 ? '◐' : '○');
-      return `<span style="font-family:var(--mono);font-size:11px;color:${pst.done ? 'var(--ok)' : 'var(--acc)'}">${stateIcon} ${label}</span>`;
+      return `<span style="font-family:var(--mono);font-size:0.6875rem;color:${pst.done ? 'var(--ok)' : 'var(--acc)'}">${stateIcon} ${label}</span>`;
     }).join(' · ');
     const banner = elHtml(`<div class="note" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-left-color:var(--acc);background:var(--acc-soft)">
       <span>📚 <b>Extends the code of:</b> ${info}</span>
-      <label style="margin-left:auto;font-size:11.5px;display:flex;gap:5px;align-items:center;cursor:pointer">
+      <label style="margin-left:auto;font-size:0.71875rem;display:flex;gap:5px;align-items:center;cursor:pointer">
         <input type="checkbox" id="chkPrereq" ${st.prereq !== false ? 'checked' : ''}>
         Include base code
       </label>
@@ -1054,10 +1099,10 @@ function renderEsercizio(box) {
   if (e.virtualFiles && Object.keys(e.virtualFiles).length) {
     const vfItems = Object.entries(e.virtualFiles).map(([name, content]) => `
       <details style="margin-top:6px">
-        <summary style="cursor:pointer;font-family:var(--mono);font-size:12px;color:var(--acc)">
-          📄 ${esc(name)} <span style="font-size:10.5px;color:var(--faint);font-weight:400">(already available — do NOT rewrite it)</span>
+        <summary style="cursor:pointer;font-family:var(--mono);font-size:0.75rem;color:var(--acc)">
+          📄 ${esc(name)} <span style="font-size:0.65625rem;color:var(--faint);font-weight:400">(already available — do NOT rewrite it)</span>
         </summary>
-        <pre style="background:#141519;padding:8px;border-radius:6px;margin-top:5px;font-size:11.5px;overflow:auto">${esc(typeof content === 'string' ? content : '(binary file — image already provided to the runtime)')}</pre>
+        <pre style="background:#141519;padding:8px;border-radius:6px;margin-top:5px;font-size:0.71875rem;overflow:auto">${esc(typeof content === 'string' ? content : '(binary file — image already provided to the runtime)')}</pre>
       </details>
     `).join('');
     wrap.appendChild(elHtml(`<div class="note" style="background:rgba(111,211,231,.13);border-left-color:var(--cyan)">
@@ -1076,10 +1121,10 @@ function renderEsercizio(box) {
       </div>`));
     } else if (solIdx.names.length) {
       const n = solIdx.names.length;
-      const shown = solIdx.names.slice(0, 6).map(x => `<code style="font-size:11px">${esc(x)}</code>`).join(' · ');
+      const shown = solIdx.names.slice(0, 6).map(x => `<code style="font-size:0.6875rem">${esc(x)}</code>`).join(' · ');
       wrap.appendChild(elHtml(`<div class="note" style="background:rgba(111,211,231,.13);border-left-color:var(--cyan)">
         <b>🧰 Support files in the runtime (${n}):</b> ${shown}${n > 6 ? ` <span class="muted">…and ${n - 6} more</span>` : ''}<br>
-        <span class="muted" style="font-size:11px">From the local solutions database: import them with <code>import</code>/<code>from</code> or read them with <code>Path(...)</code> without recreating them. If your code produces no output, the full solution is run automatically to show you the correct one.</span>
+        <span class="muted" style="font-size:0.6875rem">From the local solutions database: import them with <code>import</code>/<code>from</code> or read them with <code>Path(...)</code> without recreating them. If your code produces no output, the full solution is run automatically to show you the correct one.</span>
       </div>`));
     }
   }
@@ -1095,8 +1140,8 @@ function renderEsercizio(box) {
         <span>${autonomiaOf(S.progress, e.id)}% autonomy</span></span>
     </div>
     <div class="ex-progress">${e.steps.map((s, i) =>
-    `<span class="p-dot ${i < doneCount ? 'done' : (i === doneCount && !st.done ? 'cur' : '')}"></span>`).join('')}
-      <span class="muted" style="font-size:11px;margin-left:6px">${Math.min(doneCount, e.steps.length)}/${e.steps.length} steps</span></div>
+    `<span class="p-dot ${i < doneCount ? 'done' : (i === doneCount && !st.done ? 'cur' : '')}" aria-hidden="true"></span>`).join('')}
+      <span class="muted" style="font-size:0.6875rem;margin-left:6px">${Math.min(doneCount, e.steps.length)}/${e.steps.length} steps</span></div>
   </div>`));
   wrap.appendChild(elHtml(`<details class="ex-statement" ${doneCount === 0 ? 'open' : ''}>
     <summary>📖 Exercise statement (from the book)</summary><div class="body">${e.tr}</div></details>`));
@@ -1104,7 +1149,7 @@ function renderEsercizio(box) {
     const s = e.steps[i];
     const d = elHtml(`<details class="step-done">
       <summary><span class="n">✓</span><span class="ph">${esc(plainFrase(s.f))}</span>
-        <span class="muted" style="font-size:10px;flex:none">step ${i + 1}</span></summary>
+        <span class="muted" style="font-size:0.625rem;flex:none">step ${i + 1}</span></summary>
       <pre>${s.c ? hlInline(st.lines[i] || s.c) : '<span class="muted">— exploratory/reflection step —</span>'}</pre></details>`);
     wrap.appendChild(d);
   }
@@ -1657,6 +1702,7 @@ function renderRighe(box) {
         </div>`);
         const ta = document.createElement('textarea');
         ta.className = 'codice-ta rg-ta'; ta.spellcheck = false; ta.autocapitalize = 'off'; ta.autocomplete = 'off';
+        ta.setAttribute('aria-label', `Editor of your exercise lines${slice.passi.length > 1 ? ' — step ' + (k + 1) + ' of ' + slice.passi.length : ''}`);
         ta.rows = Math.min(22, Math.max(3, n + 1));
         ta.value = val;
         ta.placeholder = 'your exercise lines…';
@@ -1727,6 +1773,7 @@ function renderRighe(box) {
         </div>`);
         const ta = document.createElement('textarea');
         ta.className = 'codice-ta rg-ta'; ta.spellcheck = false; ta.autocapitalize = 'off'; ta.autocomplete = 'off';
+        ta.setAttribute('aria-label', `Editor of the project file ${fn}${main ? ' — file executed by run' : ''}`);
         ta.rows = Math.min(22, Math.max(3, (cur || orig).split('\n').length + 1));
         ta.value = cur;
         ta.placeholder = `content of ${fn}…`;
@@ -1752,6 +1799,7 @@ function renderRighe(box) {
       </div>`);
       const ta = document.createElement('textarea');
       ta.className = 'codice-ta rg-ta'; ta.spellcheck = false; ta.autocapitalize = 'off'; ta.autocomplete = 'off';
+      ta.setAttribute('aria-label', `Editor of the exercise lines in ${slice.main}`);
       ta.rows = Math.max(5, Math.min(22, (val || righe).split('\n').length + 2));
       ta.value = val;
       ta.placeholder = 'Pass the first step in the Exercise panel, or write the lines of your program here directly…';
@@ -2036,6 +2084,7 @@ function renderCodice(box) {
     }
     const ta = document.createElement('textarea');
     ta.id = 'codiceTa'; ta.className = 'codice-ta'; ta.spellcheck = false; ta.autocapitalize = 'off'; ta.autocomplete = 'off';
+    ta.setAttribute('aria-label', `Code editor — ${multi ? cur : mainLabel}`);
     ta.placeholder = multi
       ? `content of ${cur}…`
       : 'The program appears here as you pass the steps — or write a program of your own directly and press ▶ run.';
@@ -2118,15 +2167,23 @@ function renderModuli(box) {
   CH.forEach(c => {
     const doneN = c.ex.filter(x => exState(x.id).done).length;
     const open = S.filter ? true : (S.current && EX[S.current] && EX[S.current].ch === c.n) ? true : c.n <= 2;
+    /* ===== a11y (checklist M4) ===== the chapter accordion button exposes
+       its state with aria-expanded and points to the list it controls. */
+    const listId = 'chlist-' + c.n;
     const chEl = elHtml(`<div class="tree-ch ${open ? 'open' : ''}">
-      <button class="tree-ch-head"><span class="chev">▶</span><span>Ch. ${c.n} · ${esc(c.t)}</span>
-        <span class="cnt">${doneN}/${c.ex.length}</span></button>
-      <div class="tree-ch-bar"><i style="width:${Math.round(doneN / c.ex.length * 100)}%"></i></div>
+      <button class="tree-ch-head" aria-expanded="${open ? 'true' : 'false'}" aria-controls="${listId}">
+        <span class="chev" aria-hidden="true">▶</span><span>Ch. ${c.n} · ${esc(c.t)}</span>
+        <span class="cnt"><span class="sr-only">exercises done:</span> ${doneN}/${c.ex.length}</span></button>
+      <div class="tree-ch-bar" aria-hidden="true"><i style="width:${Math.round(doneN / c.ex.length * 100)}%"></i></div>
     </div>`);
     const list = document.createElement('div');
+    list.id = listId;
     if (!open) list.style.display = 'none';
-    chEl.querySelector('.tree-ch-head').addEventListener('click', () => {
-      chEl.classList.toggle('open'); list.style.display = chEl.classList.contains('open') ? '' : 'none';
+    const headBtn = chEl.querySelector('.tree-ch-head');
+    headBtn.addEventListener('click', () => {
+      const aperto = chEl.classList.toggle('open');
+      list.style.display = aperto ? '' : 'none';
+      headBtn.setAttribute('aria-expanded', aperto ? 'true' : 'false');
     });
     c.ex.forEach(x => {
       const st = exState(x.id);
@@ -2137,9 +2194,15 @@ function renderModuli(box) {
         const hay = (x.id + ' ' + x.t + ' ' + x.orig).toLowerCase();
         if (!hay.includes(S.filter.toLowerCase())) return;
       }
-      const row = elHtml(`<button class="tree-ex ${cur ? 'current' : ''}" data-ex="${x.id}">
-        <span class="st ${cls}">${sym}</span><span class="id">${esc(x.id)}</span>
-        <span class="tt">${esc(x.t)}</span><span class="dots">${'●'.repeat(x.lvl)}</span></button>`);
+      /* ===== a11y (checklist M4) ===== the state glyphs (✓ ◐ ○) and the
+         difficulty dots are color+shape only: the whole button carries an
+         explicit accessible name with state, difficulty and the current
+         position (SC 1.4.1 + 4.1.2). */
+      const stato = st.done ? 'completed' : st.solved > 0 ? 'in progress' : 'not started';
+      const row = elHtml(`<button class="tree-ex ${cur ? 'current' : ''}" data-ex="${x.id}"${cur ? ' aria-current="true"' : ''}
+        aria-label="Exercise ${esc(x.id)}: ${esc(x.t)} — ${stato}, difficulty ${x.lvl} of 3">
+        <span class="st ${cls}" aria-hidden="true">${sym}</span><span class="id">${esc(x.id)}</span>
+        <span class="tt">${esc(x.t)}</span><span class="dots" aria-hidden="true">${'●'.repeat(x.lvl)}</span></button>`);
       row.addEventListener('click', () => openExercise(x.id));
       list.appendChild(row);
     });
@@ -2148,7 +2211,9 @@ function renderModuli(box) {
   });
   wrap.appendChild(tree);
   if (ROADMAP.length) {
-    const road = elHtml(`<div class="tree-roadmap"><h4>Roadmap · later modules of the book</h4></div>`);
+    /* ===== a11y (checklist M1) ===== heading level: the roadmap title was
+       an h4 directly under the h2 of the panel (skipped h3): promoted. */
+    const road = elHtml(`<div class="tree-roadmap"><h3>Roadmap · later modules of the book</h3></div>`);
     ROADMAP.forEach(r => {
       const b = elHtml(`<button class="road-item" data-n="${r.n}"><span class="lock">🔒</span>
         <span>${r.proj ? '' : 'Ch. '}${r.n}${r.proj ? '' : ' · '}${esc(r.t)}</span><span class="cnt">${esc(r.cnt)}</span></button>`);
@@ -2169,7 +2234,7 @@ function renderTraccia(box) {
     <p class="pan-sub">"${esc(e.orig)}" — Python Crash Course, 3rd ed.</p>
     <div class="tr-body">${e.tr}</div>
     <hr class="hr">
-    <h2 class="pan-title" style="font-size:13px">${icon('files')} Chapter ${c.n} concepts</h2>
+    <h2 class="pan-title" style="font-size:0.8125rem">${icon('files')} Chapter ${c.n} concepts</h2>
     <div class="concepts">${c.concepts.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</div>
     <p class="pan-sub" style="margin-top:12px">${esc(c.sub)}</p>
   </div>`);
@@ -2233,7 +2298,7 @@ function renderProgressi(box) {
     <h2 class="pan-title">${icon('chart')} Progress and autonomy</h2>
     <p class="pan-sub">Session report over ${TOTAL_EX} exercises.</p>
     <div class="stat-grid">
-      <div class="stat-card"><div class="v">${g.done}<span class="muted" style="font-size:13px">/${g.total}</span></div><div class="l">exercises completed</div></div>
+      <div class="stat-card"><div class="v">${g.done}<span class="muted" style="font-size:0.8125rem">/${g.total}</span></div><div class="l">exercises completed</div></div>
       <div class="stat-card"><div class="v">${g.solved}</div><div class="l">steps passed</div></div>
       <div class="stat-card"><div class="v">${Math.max(0, Math.round((1 - g.avgAssist / 3) * 100))}%</div><div class="l">average autonomy</div></div>
       <div class="stat-card"><div class="v" style="color:${g.l3 > 3 ? 'var(--warn)' : 'var(--text)'}">${g.l3}</div><div class="l">full hints used</div></div>
@@ -2325,7 +2390,7 @@ function renderSandbox(box) {
       <p class="pan-sub" style="margin-bottom:9px">Free code on a real CPython 3.14 interpreter (Pyodide). Supports Matplotlib, Plotly and <b>playable</b> Pygame (sample "Playable Pygame 🎮").</p>
       <div class="sandbox-samples"></div>
     </div>
-    <textarea class="sandbox-ta" id="sandboxTa" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+    <textarea class="sandbox-ta" id="sandboxTa" aria-label="Python sandbox — free code editor" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
     <div class="ex-actions" style="margin-top:0">
       <button class="btn primary" id="sbRun">▶ Run</button>
       <span class="rt-note" id="sbStatus">Ctrl+Enter to run</span>
@@ -2470,6 +2535,13 @@ function renderStatus() {
       <span class="sb-item"><span class="sb-chip acc">🪂 autonomy ${autonomiaOf(S.progress, e.id)}%</span></span>
       <span class="sb-item"><span class="sb-chip ok">✓ ${doneAll}/${TOTAL_EX} exercises</span></span>
     </span>`;
+  /* ===== a11y (checklist M4) ===== the clickable chips of the status bar
+     act as buttons: focusable and operable with Enter/Space (the handler is
+     registered in init()). The busy chip stays informative-only. */
+  sb.querySelectorAll('[data-act]').forEach(el => {
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+  });
 }
 
 /* ---------- mobile header ---------- */
@@ -2479,7 +2551,7 @@ function mobileHeadHtml() {
   const sync = storage.syncStatus();
   return `
     <span class="m-brand">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#4f9cf7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3"/><path d="M4 8a8 8 0 0 1 16 0"/><path d="M3.5 8.5c2.5 1 4.5 1 6 0 1 2 3 2 5 0 1.5 1 3.5 1 6 0"/><path d="M12 12v6a2.2 2.2 0 0 0 4.4 0"/></svg>
+      <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="#4f9cf7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3"/><path d="M4 8a8 8 0 0 1 16 0"/><path d="M3.5 8.5c2.5 1 4.5 1 6 0 1 2 3 2 5 0 1.5 1 3.5 1 6 0"/><path d="M12 12v6a2.2 2.2 0 0 0 4.4 0"/></svg>
       <span>Tutor</span></span>
     <div class="m-ex">
       <div class="t">${esc(e.id)} · ${esc(e.t)}</div>
@@ -2530,6 +2602,39 @@ const Panels = {
   account: { id: 'account', title: 'Account', icon: 'user', render: renderAccount },
 };
 
+/* ============================================================
+   ===== a11y · runtime decoration of the dock-generated DOM =====
+   ------------------------------------------------------------
+   Checklist M4/M2 · the residual items that lived on the DOM built
+   by engine/dock.js (not part of this delivery) are closed here with
+   a decoration pass that works whatever the dock emits:
+   · .act-btn.active   → aria-current="true" (SC 2.4.8 · position)
+   · .act-btn icon-only → aria-label taken from its title, if any
+   · .dk-tab            → Alt+←/→ moves the focused tab inside its bar
+                          (keyboard alternative to the mouse drag)
+   · decorative <svg>   → aria-hidden="true" + focusable="false"
+   The pass also runs after every panel render (wrapper below) and
+   observes the DOM mutations of the two dock roots.
+   ============================================================ */
+function decorateA11y(root) {
+  (root || document).querySelectorAll('svg').forEach(sv => {
+    if (!sv.hasAttribute('aria-hidden') && !sv.hasAttribute('aria-label') && !sv.querySelector('title'))
+      sv.setAttribute('aria-hidden', 'true');
+    if (!sv.hasAttribute('focusable')) sv.setAttribute('focusable', 'false');
+  });
+  document.querySelectorAll('.act-btn').forEach(b => {
+    if (b.classList.contains('active')) b.setAttribute('aria-current', 'true');
+    else b.removeAttribute('aria-current');
+    if (!b.textContent.trim() && !b.getAttribute('aria-label') && b.title)
+      b.setAttribute('aria-label', b.title);
+  });
+}
+/* every panel render is followed by the decoration of its subtree */
+Object.values(Panels).forEach(p => {
+  const orig = p.render;
+  p.render = box => { orig(box); decorateA11y(box); };
+});
+
 const dock = createDock({
   panels: Panels,
   defaultLayout,
@@ -2539,10 +2644,33 @@ const dock = createDock({
   onLayoutChange: () => { renderStatus(); },
 });
 
+/* dock-generated elements (activity bar, tab bars) are decorated too:
+   the class flips on the activity bar are observed so aria-current
+   always follows the active button; Alt+arrows give the tabs the
+   keyboard alternative to the drag & drop reordering. */
+const dockRootEl = document.getElementById('dockRoot');
+if (dockRootEl) {
+  new MutationObserver(() => decorateA11y()).observe(dockRootEl, { childList: true, subtree: true });
+  dockRootEl.addEventListener('keydown', ev => {
+    if (!ev.altKey || (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight')) return;
+    const tab = ev.target.closest('.dk-tab'); if (!tab) return;
+    ev.preventDefault();
+    if (ev.key === 'ArrowLeft' && tab.previousElementSibling)
+      tab.parentElement.insertBefore(tab, tab.previousElementSibling);
+    else if (ev.key === 'ArrowRight' && tab.nextElementSibling)
+      tab.parentElement.insertBefore(tab.nextElementSibling, tab);
+    tab.focus();
+  });
+}
+const actBarEl = document.getElementById('activitybar');
+if (actBarEl) new MutationObserver(() => decorateA11y()).observe(actBarEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+
 /* ---------- startup ---------- */
 function init() {
   dock.renderActivity();
   dock.applyMode(true);
+  /* ===== a11y · first decoration pass on the freshly rendered dock ===== */
+  decorateA11y();
   storage.init();
   // ===== NEW · seeds the local solutions database (IndexedDB) =====
   solDb.init().then(info => {
@@ -2572,6 +2700,15 @@ function init() {
   $('#btnGuida').addEventListener('click', () => dock.activateOrInsert('guida'));
   $('#statusbar').addEventListener('click', ev => {
     const t = ev.target.closest('[data-act]'); if (!t) return;
+    if (isMobile()) { dock.setMobileTab(t.dataset.act); dock.renderMobilePanel(); dock.renderMobileNav(); }
+    else dock.activateOrInsert(t.dataset.act);
+  });
+  /* ===== a11y (checklist M4) ===== the status chips are buttons: Enter
+     and Space activate them from the keyboard (SC 2.1.1). */
+  $('#statusbar').addEventListener('keydown', ev => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    const t = ev.target.closest('[data-act]'); if (!t) return;
+    ev.preventDefault();
     if (isMobile()) { dock.setMobileTab(t.dataset.act); dock.renderMobilePanel(); dock.renderMobileNav(); }
     else dock.activateOrInsert(t.dataset.act);
   });
