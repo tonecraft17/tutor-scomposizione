@@ -1,6 +1,6 @@
 {
   "name": "tutor-scomposizione-esm-soluzioni",
-  "version": "13.0.0",
+  "version": "14.0.0",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -26,15 +26,17 @@
     "esercizi",
     "italian",
     "vanilla-js",
-    "no-build"
+    "no-build",
+    "lazy-loading"
   ],
-  "description": "Interactive tutor for Python Crash Course (3rd ed.) — v13.0 English edition: the ✎ «Lines» panel shows only the exercise's own lines, with the ⚙ PONTE bridge (engine/ponte.js) to the project's modules — slot rules (value → value), scale rules (factor × base speeds), block rules (replaced methods) and whole-program rules (trace = entry); edits arm the same overrides as ⌨ Code, with immediate effect on the output; «▶ run» closes a still-running Pygame and restarts with the new lines; dedicated «⟲ restore original». Full editor (⌨ code + ✎ lines) in its own tab in the activity bar. Includes the v11 full program for fragments, the v10 editor + terminal, and the v9–v5 history.",
+  "description": "Interactive tutor for Python Crash Course (3rd ed.) — v14.0 English edition: the ✎ «Lines» panel shows only the exercise's own lines, with the ⚙ PONTE bridge (engine/ponte.js) to the project's modules — slot rules (value → value), scale rules (factor × base speeds), block rules (replaced methods) and whole-program rules (trace = entry); edits arm the same overrides as ⌨ Code, with immediate effect on the output; «▶ run» closes a still-running Pygame and restarts with the new lines; dedicated «⟲ restore original». Full editor (⌨ code + ✎ lines) in its own tab in the activity bar. v14 performance: plotly.js and the solutions database load lazily (per-chapter bundles), cutting the first-load critical chain from ~3.2 MB to ~190 KB. Includes the v11 full program for fragments, the v10 editor + terminal, and the v9–v5 history.",
   "engines": {
     "node": ">=18"
   },
   "scripts": {
     "audit": "node audit_step_check.mjs",
     "audit:dettaglio": "node audit_step_check.mjs --dettaglio",
+    "split:solutions": "node scripts/split-solutions.mjs",
     "test:16-9": "node test_flessibilita.mjs",
     "test:v5": "node test_flessibilita_v5.mjs",
     "test:modi": "node test_modi_v11.mjs",

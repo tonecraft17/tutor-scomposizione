@@ -30,7 +30,7 @@ study an exercise → break it down into steps → write the lines → really ru
 | Tests | `pytest` executed in the in-browser runtime |
 | Network | `requests` + `pyodide-http` (browser fetch) for the ch. 17 APIs |
 | Frontend | **vanilla JavaScript** in **ES modules** (zero frameworks, zero build step), custom CSS (dark theme, VS Code-style dock layout, dedicated mobile view) |
-| Storage | **localStorage** (progress, layout) + **IndexedDB** (local solutions database, seeded from `data/solutions.js` on first run) |
+| Storage | **localStorage** (progress, layout) + **IndexedDB** (local solutions database: per-chapter bundles from `data/solutions/`, seeded on first use of each chapter — v14) |
 | Cloud (optional) | Supabase (progress sync across devices) — see [Optional configuration](#optional-configuration-supabase) |
 | Dev tests | Node.js ≥ 18 (`node test_*.mjs`, no dependencies to install) |
 
@@ -110,21 +110,26 @@ tutor-scomposizione/
 │   ├── python-runner.js        # main-thread ↔ worker orchestrator
 │   ├── python-worker.js        # Pyodide in the Web Worker: prelude, games, pytest, charts
 │   ├── ponte.js                # exercise-lines → project-files table (pure data)
-│   ├── solutions-db.js         # IndexedDB solutions database (seed + queries)
+│   ├── solutions-db.js         # IndexedDB solutions database (lazy per-chapter seed + queries — v14)
 │   ├── storage.js              # progress: localStorage + optional Supabase sync
 │   ├── dock.js                 # dock layout of the panels (drag, tabs, mobile)
 │   └── tutor.js                # step verification (expected output, minimum units)
 │
 ├── data/
 │   ├── exercises.js            # the 199 exercises: steps, questions, checks (~450 KB)
-│   ├── solutions.js            # official solution files + b64 images (~7.7 MB)
-│   └── solutions-index.js      # lightweight solutions index (for the UI)
+│   ├── solutions.js            # full solution bundle (~7.7 MB) — build input + Node tests, NEVER fetched by the browser (v14)
+│   ├── solutions-index.js      # lightweight solutions index (for the UI)
+│   └── solutions/              # per-chapter bundles chNN.js, loaded on demand (v14)
+│
+├── scripts/
+│   └── split-solutions.mjs     # regenerates data/solutions/ from data/solutions.js (v14)
 │
 ├── supabase/
 │   └── schema.sql              # progress table schema (optional cloud sync)
 │
 ├── docs/
-│   └── GITHUB-PUBLISHING.md    # quality/security checklist + first-push guide
+│   ├── GITHUB-PUBLISHING.md    # quality/security checklist + first-push guide
+│   └── LIGHTHOUSE-v14.md       # before/after of the v14 performance/a11y/SEO fixes
 │
 ├── audit_step_check.mjs        # audit: exercises/steps/solutions consistency
 ├── test_righe_v12.mjs          # ✎ Lines panel + bridge tests (patch, round-trip)
@@ -134,7 +139,7 @@ tutor-scomposizione/
 ├── test_input_pygame.html      # manual page: Pygame game input
 ├── test_runtime_plotly.html    # manual page: Plotly runtime
 │
-├── CHANGELOG-v5.md … CHANGELOG-v13.md   # the full version history
+├── CHANGELOG-v5.md … CHANGELOG-v14.md   # the full version history
 ├── README.md                   # this file
 ├── LICENSE                     # MIT
 └── .gitignore

@@ -110,9 +110,12 @@ onPlotlyFigure(({ json }) => {
   pushGraph({ kind: 'plotly', id: 'plotly-' + (++GRAPHS.seq) + '-' + Math.random().toString(36).slice(2, 7), fig });
 });
 
-/* FIX v7 · plotly.js is loaded with <script defer> in index.html:
-   if it hasn't arrived yet (or the CDN was down at startup), load it
-   just once on the first chart, instead of leaving the card empty. */
+/* ===== CHANGED v14 · plotly.js is NOT in index.html anymore (it used
+   to load with <script defer> on every page load: 1.33 MB of which 77%
+   unused, on the LCP critical chain). This loader is now the ONLY
+   entry point: it fires on the first Plotly chart (or on a panel
+   refresh of an already-produced chart) and downloads the library
+   once — if the CDN is down, the card shows the error below. ===== */
 let plotlyJsPromise = null;
 function ensurePlotlyJs() {
   if (typeof Plotly !== 'undefined') return Promise.resolve(true);
@@ -2672,12 +2675,18 @@ function init() {
   /* ===== a11y · first decoration pass on the freshly rendered dock ===== */
   decorateA11y();
   storage.init();
-  // ===== NEW · seeds the local solutions database (IndexedDB) =====
+  // ===== CHANGED v14 · the solutions database is no longer bulk-seeded at
+  // startup (that downloaded the whole ~7.7 MB bundle on the first visit,
+  // straight onto the LCP critical chain). init() is now cheap: it only
+  // opens IndexedDB and migrates a v13 bulk seed if present. Each chapter's
+  // files are imported on demand by the first getSolution() of that chapter
+  // and seeded then — the toast below fires on those first-time downloads. =====
+  document.addEventListener('soldb:chapter', ev => {
+    toast(`📚 Chapter ${ev.detail.ch}: downloading its solution files (first time only)…`, '');
+  });
   solDb.init().then(info => {
     if (info && info.done) {
-      toast(info.reseeded
-        ? `🔄 Solutions database updated: ${info.count} exercises.`
-        : `📚 Solutions database ready: ${info.count} exercises with support files and output.`, 'ok');
+      toast(`📚 Solutions database ready: ${info.count} exercises — chapter files load on demand.`, 'ok');
     }
   }).catch(() => { toast('⚠ Solutions database unavailable: running without support files.', 'warn'); });
   onPythonStatus(() => { renderStatus(); });
