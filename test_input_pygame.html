@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Runtime test · Pygame input (v8)</title>
+<style>
+  body { font: 13px/1.5 monospace; background: #14161a; color: #d7dae0; padding: 18px; }
+  h1 { font-size: 15px; color: #8fc1ff; }
+  pre { background: #0c0d10; border: 1px solid #2a2e36; border-radius: 8px; padding: 10px; white-space: pre-wrap; min-height: 60px; }
+  .ok { color: #6dd66d; } .ko { color: #ff7b72; font-weight: bold; }
+  button { font: inherit; padding: 6px 14px; border-radius: 6px; border: 1px solid #3a4048; background: #23262d; color: #d7dae0; cursor: pointer; }
+  #status b { color: #ffc66d; }
+</style>
+</head>
+<body>
+<h1>Runtime test · keyboard/mouse input in Pygame games</h1>
+<p>The program below really runs in Pyodide (worker): a pygame loop that prints every event it receives and exits after 3 events (or 2000 iterations). Once the runtime is up, the page automatically sends KEYDOWN q, MOUSEMOTION and MOUSEBUTTONDOWN via <code>sendPygameEvent</code> — the same messages as the Game panel.</p>
+<p id="status">Status: <b>starting…</b></p>
+<pre id="out"></pre>
+<script type="module">
+import { runPythonCode, onPythonStatus, onPygameFrame, sendPygameEvent } from './engine/python-runner.js';
+
+const out = document.getElementById('out');
+const status = document.querySelector('#status b');
+const log = (s, cls) => { out.innerHTML += (cls ? `<span class="${cls}">${s}</span>` : s) + '\n'; };
+
+const PROGRAM = `import pygame
+pygame.init()
+screen = pygame.display.set_mode((400, 300))
+n = 0
+seen = 0
+while True:
+    for e in pygame.event.get():
+        seen += 1
+        print('EV type=', e.type, 'key=', getattr(e, 'key', None), 'pos=', getattr(e, 'pos', None))
+    n += 1
+    if seen >= 3 or n > 2000:
+        break
+    screen.fill((40, 40, 80))
+    pygame.display.flip()
+print('DONE iterations=', n, 'events-seen=', seen)
+print('mouse_pos=', pygame.mouse.get_pos())`;
+
+onPythonStatus(s => { status.textContent = s.status + (s.detail ? ' — ' + s.detail : ''); });
+
+let frame = 0;
+onPygameFrame(() => {
+  frame++;
+  if (frame === 5) {
+    log('— 5 frames received: sending KEYDOWN q…');
+    sendPygameEvent({ t: 'KEYDOWN', key: 'K_q', ch: 'q' });
+  }
+  if (frame === 25) {
+    log('— sending MOUSEMOTION (200, 150) and MOUSEBUTTONDOWN…');
+    sendPygameEvent({ t: 'MOUSEMOTION', x: 200, y: 150 });
+    sendPygameEvent({ t: 'MOUSEBUTTONDOWN', x: 200, y: 150, button: 1 });
+    sendPygameEvent({ t: 'KEYUP', key: 'K_q' });
+  }
+});
+
+const t0 = Date.now();
+log('▶ starting execution (' + PROGRAM.length + ' characters)…');
+const res = await runPythonCode(PROGRAM, {}, {});
+log('— result in ' + (Date.now() - t0) + ' ms —');
+if (res.ok) {
+  log(res.output || '(no output)');
+  const ok = /events-seen= 3/.test(res.output || '') && /EV type=/.test(res.output || '');
+  log(ok ? 'PASSED: the game received all 3 events from the Game panel.'
+         : 'PARTIAL: check above how many events arrived.', ok ? 'ok' : 'ko');
+} else {
+  /* res.error.tipo / res.error.messaggio: error field names of engine/python-runner.js */
+  log('ERROR ' + res.error.tipo + ': ' + res.error.messaggio, 'ko');
+  if (res.error.traceback) log(res.error.traceback);
+}
+</script>
+</body>
+</html>

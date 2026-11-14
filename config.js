@@ -1,0 +1,62 @@
+/* ============================================================
+   CONFIG — single place for endpoints, keys and global constants
+   ============================================================ */
+
+export const APP = {
+  name: 'Tutor · Progressive Breakdown',
+  subtitle: 'Python Crash Course — Exercises Ch. 1–20 + Appendices D–E',
+};
+
+/* ---------- Python runtime (Pyodide) ---------- */
+export const PYODIDE = {
+  indexURL: 'https://cdn.jsdelivr.net/pyodide/v314.0.7/full/',
+  timeoutS: 8,
+  stdoutLimit: 200_000,
+
+  // Packages loaded automatically on first use (lazy).
+  // User code is inspected with a regex: if it contains "import matplotlib"
+  // (or plotly/pygame), the matching package is downloaded BEFORE execution.
+  packages: {
+    matplotlib: { native: true, name: 'matplotlib' },
+    pygame:     { native: true, name: 'pygame-ce' }, // the Python module is named "pygame"
+    plotly:     { native: false, name: 'plotly', nativeDeps: ['numpy', 'pandas'] }, // via micropip + NATIVE numpy/pandas (see CHANGELOG-v6)
+    pytest:     { native: true, name: 'pytest' },    // for the test-chapter solutions
+    requests:   { native: false, name: ['requests', 'pyodide-http'] }, // Ch. 17 APIs via fetch
+  },
+};
+
+/* ---------- Plotly.js (chart rendering in the browser) ---------- */
+export const PLOTLY_JS = {
+  url: 'https://cdn.plot.ly/plotly-2.35.2.min.js',
+};
+
+/* ---------- Supabase ---------- */
+export const SUPABASE = {
+  url: '',
+  anonKey: '',
+  umdUrl: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js',
+  syncDebounceMs: 1200,
+};
+
+export function supabaseConfigured() {
+  return SUPABASE.url.startsWith('https://') && SUPABASE.url.includes('.supabase.') &&
+         SUPABASE.anonKey.length > 30;
+}
+
+/* ---------- Local solutions database (IndexedDB) ----------
+   Seeded from data/solutions.js (see engine/solutions-db.js).
+   The lightweight index for the UI is statically imported from
+   data/solutions-index.js. */
+export const SOLUTIONS = {
+  bundleUrl: './data/solutions.js',
+  idbName: 'tutorSolutionsDB',
+  idbVersion: 1,
+};
+
+/* ---------- localStorage keys ---------- */
+export const KEYS = {
+  progress: 'tutorProgress',
+  current: 'tutorCurrent',
+  layout: 'tutorLayoutV12',   // ===== CHANGED v12 · new default layout: ⌨/✎ editor in its own tab (split from the console) =====
+  seen: 'tutorSeen',
+};

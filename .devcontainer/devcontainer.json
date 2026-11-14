@@ -1,0 +1,16 @@
+{
+	"name": "Ubuntu Cline Sandbox",
+	"image": "mcr.microsoft.com/devcontainers/base:resolute",
+	// Permette al container di raggiungere Ollama sul tuo PC host
+	"runArgs": [
+		"--add-host=host.docker.internal:host-gateway"
+	],
+	// Installa automaticamente Cline dentro il container all'avvio
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"saoudrizwan.claude-dev"
+			]
+		}
+	}
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#17181c">
+  <title>Tutor · Progressive Breakdown — Python Crash Course</title>
+  <!-- ?v=13.0 · cache-busting: bump the version on every release, so the
+       browser never serves a stale app.js/styles.css from the HTTP cache
+       (for nested modules use serve.py, which disables caching entirely) -->
+  <link rel="stylesheet" href="styles.css?v=13.0">
+  <!-- Plotly.js for rendering figures in the "Charts" panel -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" defer></script>
+  <script>
+    if (location.protocol === 'file:') {
+      document.addEventListener('DOMContentLoaded', function () {
+        document.body.setAttribute('style', 'margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#17181c;color:#d8dae0;font:14px/1.75 system-ui,Segoe UI,sans-serif;text-align:center;padding:26px');
+        document.body.innerHTML =
+          '<div style="max-width:560px">' +
+          '<h2 style="margin:0 0 12px">A small local server is required</h2>' +
+          '<p style="color:#9a9eab">This version uses <b>ES6 modules</b>, which browsers block when the page is opened directly from <code>file://</code>.</p>' +
+          '<pre style="background:#141519;border:1px solid #33353d;border-radius:9px;padding:13px;text-align:left;display:inline-block;margin:10px 0">cd tutor-scomposizione-esm\npython -m http.server 8000\n\n# then open http://localhost:8000</pre>' +
+          '</div>';
+      });
+    }
+  </script>
+</head>
+
+<body>
+  <header class="titlebar" id="titlebar">
+    <div class="tl-dots"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+    <div class="brand" id="brandBox">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#4f9cf7" stroke-width="1.7" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M12 3v3" />
+        <path d="M4 8a8 8 0 0 1 16 0" />
+        <path d="M3.5 8.5c2.5 1 4.5 1 6 0 1 2 3 2 5 0 1.5 1 3.5 1 6 0" />
+        <path d="M12 12v6a2.2 2.2 0 0 0 4.4 0" />
+      </svg>
+      <span>Tutor · Progressive Breakdown</span>
+      <span class="sub" id="brandSub">Python Crash Course — Exercises Ch. 1–20 + Appendices D–E</span>
+    </div>
+    <div class="tl-center">
+      <div class="searchbox" id="searchBox">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
+        <input id="globalSearch" placeholder="Search exercise… (e.g. «3-4» or «guests»)" autocomplete="off">
+      </div>
+    </div>
+    <div class="tl-right">
+      <button class="tl-btn" id="btnGuida" title="How the method works and how to move the panels">? Guide</button>
+      <button class="tl-btn" id="btnReset" title="Reset panel layout and progress">⟲ Reset</button>
+    </div>
+  </header>
+
+  <div class="workbench">
+    <nav class="activitybar" id="activitybar" aria-label="Activity bar"></nav>
+    <main class="dock-root" id="dockRoot" aria-label="Work area"></main>
+  </div>
+
+  <div id="mobileView">
+    <div class="m-head" id="mHead"></div>
+    <div class="m-content" id="mContent"></div>
+    <nav class="m-nav" id="mNav" aria-label="Mobile navigation"></nav>
+  </div>
+
+  <footer class="statusbar" id="statusbar"></footer>
+  <div id="toasts"></div>
+  <div id="modalHost"></div>
+
+  <script type="module" src="app.js?v=13.0"></script>
+</body>
+
+</html>
