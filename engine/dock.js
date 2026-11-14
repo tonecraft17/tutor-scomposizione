@@ -105,8 +105,50 @@ export function createDock(opts){
     if(!layout) layout = loadLS(storageKey, null) || defaultLayout();
     layout = simplify(layout) || defaultLayout();
     root.appendChild(renderNode(layout));
+    /* ===== CHANGED v15 · PERFORMANCE: panel bodies render PROGRESSIVELY.
+         Before, renderLayout() synchronously rendered the body of every
+         open panel (the 199-exercise Modules tree, the Walkthrough, the
+         Exercise, the Console and the Code editor) in ONE long main-thread
+         task: the LCP element could not paint until all of them were done
+         (83% of the LCP was render delay, 156 ms of Layout). Now the dock
+         skeleton + the LCP-likeliest panel render in the first frame and
+         the remaining bodies follow one frame at a time (~8 ms budget per
+         frame), so the browser paints in between: the largest element
+         shows up first, TBT drops because no long task blocks input. ===== */
+    queueBodies();
     updateActivityBar(); onLayoutChange();
     if(isEmptyTree()) root.appendChild(emptyHint());
+  }
+
+  /* ---------- v15 · progressive body scheduler ---------- */
+  /* Render order: the Exercise panel is the likeliest LCP element (the
+     largest text block of the default layout, on desktop AND mobile), so
+     it renders first, together with the skeleton; the heavy Modules tree
+     follows in the next frame instead of delaying everything. */
+  const BODY_PRIO = { esercizio:0, moduli:1, traccia:2, console:3, codice:4,
+                      righe:5, progressi:6, grafici:7, gioco:8, sandbox:9,
+                      account:10, guida:11 };
+  let bodyQueue=[], bodyTick=0;
+  function queueBodies(){
+    if(bodyTick) cancelAnimationFrame(bodyTick);
+    bodyTick=0;
+    bodyQueue=[];
+    walkGroups(layout, g=>bodyQueue.push(g));
+    bodyQueue.sort((a,b)=>(BODY_PRIO[a.active]??99)-(BODY_PRIO[b.active]??99));
+    /* first body in the same frame as the skeleton: something meaningful
+       paints immediately, without waiting for the rAF chain */
+    const g0=bodyQueue.shift();
+    if(g0 && g0._el && !g0._bodyReady) renderGroupBody(g0);
+    if(!bodyQueue.length) return;
+    const step=()=>{
+      const t0=performance.now();
+      while(bodyQueue.length && performance.now()-t0<8){
+        const g=bodyQueue.shift();
+        if(g._el && !g._bodyReady) renderGroupBody(g);
+      }
+      bodyTick = bodyQueue.length ? requestAnimationFrame(step) : 0;
+    };
+    bodyTick=requestAnimationFrame(step);
   }
   function isEmptyTree(){ return layout.type==='group' && layout.tabs.length===0; }
   function emptyHint(){
@@ -153,14 +195,14 @@ export function createDock(opts){
     el.appendChild(tabs);
     const body=document.createElement('div'); body.className='dk-body';
     el.appendChild(body);
-    g._el=el; g._body=body;
-    renderGroupBody(g);
+    g._el=el; g._body=body; g._bodyReady=false;   // CHANGED v15 · the body is filled by the progressive scheduler (queueBodies), no longer inline
     return el;
   }
   function syncTabs(g){
     g._el.querySelectorAll('.dk-tab').forEach(t=>t.classList.toggle('active', t.dataset.panel===g.active));
   }
   function renderGroupBody(g){
+    g._bodyReady=true;   // v15 · tells the progressive scheduler this body is done (also when rendered synchronously by a user action)
     const prev=g._body ? g._body.firstElementChild : null;
     const st=prev ? prev.scrollTop : 0;
     g._body.innerHTML='';
@@ -282,7 +324,9 @@ export function createDock(opts){
         if(anchor){ if(zone==='center'){ anchor.tabs.push(pid); anchor.active=pid; } else insertSplit(pid, anchor, zone); }
       }
     }
-    renderLayout(); saveLayoutSoon();
+    renderLayout();
+    const drop=findGroupOf(layout, pid); if(drop) refreshBody(drop);   // v15 · the panel the user just dropped shows immediately, not at its scheduler turn
+    saveLayoutSoon();
   }
   function groupInTree(node, g){ return !!walkFind(node, n=>n===g); }
   function nearestGroup(node, zone){
@@ -354,6 +398,9 @@ export function createDock(opts){
       renderLayout(); saveLayoutSoon();
       toast('Panel "'+panels[pid].title+'" reopened.');
     }
+    /* v15 · the panel the user asked for is rendered right away: the
+       progressive scheduler would otherwise give it its LCP-priority turn */
+    const tgt=findGroupOf(layout, pid); if(tgt) refreshBody(tgt);
   }
   /* ===== NEW v7 · minimum space for a panel =====
      If the panel's group is too short (column split) or too narrow

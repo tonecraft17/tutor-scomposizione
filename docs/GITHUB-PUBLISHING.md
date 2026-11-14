@@ -119,8 +119,9 @@ git push -u origin main
 ```
 
 **Future updates**: at every release bump the version marker `?v=…` of `app.js`
-and `styles.css` in `index.html` (prevents stale module caching), the `version`
-in `package.json`, and the CHANGELOG.
+and `styles.css` in `index.html` (prevents stale module caching), the `CACHE`
+constant in `sw.js` (purges the previous service-worker bucket on activate),
+the `version` in `package.json`, and the CHANGELOG.
 
 ---
 

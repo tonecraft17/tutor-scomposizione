@@ -1071,7 +1071,14 @@ function renderEsercizio(box) {
   const e = EX[S.current] || EX[ORDER[0]];
   const st = exState(e.id);
   const wrap = elHtml('<div class="ex-wrap"></div>');
-  box.innerHTML = ''; box.appendChild(wrap);
+  /* ===== CHANGED v15 · PERFORMANCE: `wrap` stays DETACHED while every
+       section below is built and appended — the panel mutates the LIVE
+       DOM exactly once, at the end of the function. Before, `wrap` was
+       attached to `box` up front, so each of the ~8 appendChild calls
+       re-invalidated the layout of a connected subtree (renderEsercizio
+       is one of the two functions the trace flagged for Layout work).
+       The empty container + final single append also collapse the whole
+       build into one parse+style+layout pass. ===== */
   // ===== Prerequisite banner =====
   if (e.prereq) {
     const prereqIds = Array.isArray(e.prereq) ? e.prereq : [e.prereq];
@@ -1132,6 +1139,7 @@ function renderEsercizio(box) {
     }
   }
   const doneCount = st.solved;
+  const aut = autonomiaOf(S.progress, e.id);   // v15 · computed once, it was called twice below
   wrap.appendChild(elHtml(`<div class="ex-head">
     <h1>${esc(e.t)}</h1><span class="orig">"${esc(e.orig)}"</span>
     <div class="ex-meta">
@@ -1139,8 +1147,8 @@ function renderEsercizio(box) {
       <span class="chip">${esc(e.id)}</span>
       <span class="chip ${e.lvl === 3 ? 'warn' : e.lvl === 2 ? 'purple' : 'ok'}">${'●'.repeat(e.lvl)}${'○'.repeat(3 - e.lvl)} ${e.lvl === 3 ? 'Challenging' : e.lvl === 2 ? 'Medium' : 'Easy'}</span>
       <span class="meter" title="Syntactic autonomy index on solved steps">
-        <span class="bar"><i style="width:${autonomiaOf(S.progress, e.id)}%"></i></span>
-        <span>${autonomiaOf(S.progress, e.id)}% autonomy</span></span>
+        <span class="bar"><i style="width:${aut}%"></i></span>
+        <span>${aut}% autonomy</span></span>
     </div>
     <div class="ex-progress">${e.steps.map((s, i) =>
     `<span class="p-dot ${i < doneCount ? 'done' : (i === doneCount && !st.done ? 'cur' : '')}" aria-hidden="true"></span>`).join('')}
@@ -1165,6 +1173,10 @@ function renderEsercizio(box) {
     if (doneCount + 1 < e.steps.length)
       wrap.appendChild(elHtml(`<div class="upcoming"><span class="lock">🔒</span> ${e.steps.length - doneCount - 1} more steps await you: they unlock one at a time.</div>`));
   }
+  /* v15 · the only live-DOM mutation of the whole build: one append of
+     the fully populated tree → one style/layout pass instead of one per
+     section */
+  box.innerHTML = ''; box.appendChild(wrap);
   requestAnimationFrame(() => {
     const c = box.querySelector('#stepCard') || box.querySelector('.ex-final');
     if (c) c.scrollIntoView({ block: 'nearest', behavior: 'auto' });
@@ -2620,18 +2632,29 @@ const Panels = {
    observes the DOM mutations of the two dock roots.
    ============================================================ */
 function decorateA11y(root) {
+  /* ===== CHANGED v15 · PERFORMANCE: the <svg> pass is scoped to the root
+       it is given; the .act-btn pass only runs for document-level calls —
+       a panel body never contains activity-bar buttons, yet the old code
+       re-queried them (document-wide) after EVERY panel render, and the
+       panels now re-render one per frame during startup. ===== */
   (root || document).querySelectorAll('svg').forEach(sv => {
     if (!sv.hasAttribute('aria-hidden') && !sv.hasAttribute('aria-label') && !sv.querySelector('title'))
       sv.setAttribute('aria-hidden', 'true');
     if (!sv.hasAttribute('focusable')) sv.setAttribute('focusable', 'false');
   });
-  document.querySelectorAll('.act-btn').forEach(b => {
+  if (!root) document.querySelectorAll('.act-btn').forEach(b => {
     if (b.classList.contains('active')) b.setAttribute('aria-current', 'true');
     else b.removeAttribute('aria-current');
     if (!b.textContent.trim() && !b.getAttribute('aria-label') && b.title)
       b.setAttribute('aria-label', b.title);
   });
 }
+/* v15 · PERFORMANCE: the two MutationObservers below fire on every dock
+   mutation; the pass they request is debounced, so a burst of mutations
+   (progressive body rendering, a panel refresh storm) costs ONE document
+   pass instead of one per event. 40 ms is imperceptible for the a11y tree. */
+let _decT = 0;
+function decorateSoon() { clearTimeout(_decT); _decT = setTimeout(() => decorateA11y(), 40); }
 /* every panel render is followed by the decoration of its subtree */
 Object.values(Panels).forEach(p => {
   const orig = p.render;
@@ -2653,7 +2676,7 @@ const dock = createDock({
    keyboard alternative to the drag & drop reordering. */
 const dockRootEl = document.getElementById('dockRoot');
 if (dockRootEl) {
-  new MutationObserver(() => decorateA11y()).observe(dockRootEl, { childList: true, subtree: true });
+  new MutationObserver(decorateSoon).observe(dockRootEl, { childList: true, subtree: true });
   dockRootEl.addEventListener('keydown', ev => {
     if (!ev.altKey || (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight')) return;
     const tab = ev.target.closest('.dk-tab'); if (!tab) return;
@@ -2666,7 +2689,7 @@ if (dockRootEl) {
   });
 }
 const actBarEl = document.getElementById('activitybar');
-if (actBarEl) new MutationObserver(() => decorateA11y()).observe(actBarEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+if (actBarEl) new MutationObserver(decorateSoon).observe(actBarEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
 
 /* ---------- startup ---------- */
 function init() {

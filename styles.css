@@ -246,6 +246,11 @@ svg.ic {
 .act-btn {
   width: 36px;
   height: 38px;
+  /* NEW v15 · hardening: keep the target above the 24×24 px minimum of
+     WCAG 2.5.8 even if a future CSS change shrinks width/height — this is
+     what made the desktop Lighthouse run of v14 wobble on target-size */
+  min-width: 24px;
+  min-height: 24px;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -1868,6 +1873,13 @@ details>summary::-webkit-details-marker {
   position: fixed;
   bottom: 44px;
   right: 16px;
+  /* ===== NEW v15 · CLS: the box height is RESERVED (~3 stacked toasts)
+     and toasts stack from the bottom: adding/removing one no longer
+     grows the container and shifts the layout (the trace showed a 0.02
+     shift right after the first render). The empty container paints
+     nothing, so this costs no pixels. ===== */
+  height: 150px;
+  justify-content: flex-end;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1885,6 +1897,7 @@ details>summary::-webkit-details-marker {
   box-shadow: 0 10px 34px rgba(0, 0, 0, .5);
   max-width: 330px;
   animation: toast-in .25s;
+  flex-shrink: 0;   /* NEW v15 · never squeeze a toast inside the reserved space */
 }
 
 .toast.ok {
