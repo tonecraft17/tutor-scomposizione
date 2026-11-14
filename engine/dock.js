@@ -421,7 +421,10 @@ export function createDock(opts){
       // ===== CHANGED v10 · the separator follows the panel, not the index =====
       if(pid==='sandbox'){ const sep=document.createElement('div'); sep.className='act-sep'; bar.appendChild(sep); }
       const special = specialPanels[pid];   // ===== NEW v16 · drawer / overlay triggers =====
-      const b=elHtml(`<button class="act-btn" data-panel="${pid}"${special?' data-special="1"':''} title="${esc(title)}" aria-label="${esc(title)}${special?' (opens a slide-out menu, not a dock tab)':''}">${icon(ic)}</button>`);
+      const extra = special
+        ? (pid === 'guida' ? ' (opens the guide overlay, not a dock tab)' : ' (opens the slide-out Modules menu, not a dock tab)')
+        : '';
+      const b=elHtml(`<button class="act-btn" data-panel="${pid}"${special?' data-special="1"':''} title="${esc(title)}" aria-label="${esc(title)}${extra}">${icon(ic)}</button>`);
       b.addEventListener('click', ()=>{ if(special){ onSpecial(pid); return; } togglePanel(pid); });   // ===== CHANGED v16 · toggle close + special panels =====
       bar.appendChild(b);
     });
@@ -551,6 +554,7 @@ export function createDock(opts){
     c.appendChild(d);
     const p=panels[mobileTab]||panels.esercizio;
     try{ p.render(d); }catch(err){ d.innerHTML='<div class="dk-empty">⚠ Panel error: '+esc(err.message)+'</div>'; }
+    onLayoutChange();   // ===== NEW v16.1 · a tab switch is a layout change too (the app uses it to restore the auto-hidden header) =====
   }
   function renderMobile(){ renderMobileHead(); renderMobileNav(); renderMobilePanel(); }
   let curMode=null;

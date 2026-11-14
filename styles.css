@@ -116,6 +116,27 @@ svg.ic {
   background: #131418;
   border-bottom: 1px solid #26272d;
   user-select: none;
+  /* ===== NEW v16.1 · auto-hide on scroll: scrolling DOWN inside any panel
+     slides the bar away (the work area grows by its 38px); scrolling UP
+     brings it back. The class is toggled by the scroll watcher in app.js. ===== */
+  transition: margin-top .26s ease, opacity .26s ease;
+  position: relative;
+  z-index: 30;
+}
+
+/* v16.1 · hidden state (desktop titlebar + mobile header): the negative
+   margin pulls it out of view AND makes the following section fill the
+   freed space, so no blank strip is left behind */
+body.head-off .titlebar {
+  margin-top: -38px;
+  opacity: 0;
+  pointer-events: none
+}
+
+body.mobile.head-off .m-head {
+  margin-top: -54px;
+  opacity: 0;
+  pointer-events: none
 }
 
 .tl-dots {
@@ -1985,15 +2006,23 @@ body.mobile .titlebar {
   display: none
 }
 
+/* ===== CHANGED v16.1 · fixed height: the drawer slides UNDER this bar
+   (it must stay visible and clickable — ☰ toggles the drawer closed),
+   so its offset needs a predictable value (see .drawer in the mobile
+   media query). ===== */
 .m-head {
   flex: none;
+  height: 54px;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 0 14px;
   background: #131418;
   border-bottom: 1px solid #26272d;
   user-select: none;
+  position: relative;   /* v16.1 · stays above the drawer */
+  z-index: 1002;
+  transition: margin-top .26s ease, opacity .26s ease
 }
 
 .m-head .m-brand {
@@ -2651,6 +2680,7 @@ figure.graph-card {
   flex-direction: column;
   gap: 10px;
   height: 100%;
+  position: relative;   /* v16.1 · anchor for the full-screen overlays (meta bar, pad) */
   /* FIX v8 · direct children must not overflow: the canvas scales */
   min-height: 0
 }
@@ -3110,9 +3140,20 @@ figure.graph-card {
 }
 
 /* ---------- Modules drawer (side-sliding menu) ---------- */
+/* ===== CHANGED v16.1 · the drawer no longer covers the activity bar nor
+   the titlebar: it slides over the WORK AREA only, flush against the right
+   edge of the sidebar (VS Code style). Why: before, the open drawer hid
+   the very icon that had opened it, so clicking it again — the natural
+   "close it" gesture — landed on the drawer's search box instead. With
+   the bar visible the icon stays clickable and toggles the drawer. The
+   backdrop too starts below the titlebar, so the top bar keeps working
+   (e.g. "? Guide") while the drawer is open. ===== */
 .drawer-bg {
   position: fixed;
-  inset: 0;
+  left: 46px;   /* v16.1 · after the activity bar */
+  top: 38px;    /* v16.1 · below the titlebar */
+  right: 0;
+  bottom: 0;
   background: rgba(8, 9, 12, .55);
   z-index: 1000;
   opacity: 0;
@@ -3125,8 +3166,8 @@ figure.graph-card {
 
 .drawer {
   position: fixed;
-  left: 0;
-  top: 0;
+  left: 46px;   /* v16.1 · after the activity bar */
+  top: 38px;    /* v16.1 · below the titlebar */
   bottom: 0;
   width: 348px;
   max-width: 88vw;
@@ -3398,12 +3439,19 @@ figure.graph-card {
   color: var(--acc)
 }
 
-/* ---------- mobile · on-screen game pad ---------- */
+/* ---------- mobile · on-screen game pad ----------
+   ===== CHANGED v16.1 · redesigned for immersion: bigger keys (56px, well
+   above the 48px touch minimum), a pressed-key 3D look, a wider pill for
+   FIRE, tiny labels under the glyphs, and a bar that respects the
+   safe-area at the bottom. ===== */
 .game-pad {
   display: flex;
   align-items: center;
-  justify-content: space-evenly;
-  padding: 12px 10px 6px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(#191b21, #0d0e12);
+  border-top: 1px solid var(--border);
   touch-action: none;
   user-select: none;
   -webkit-user-select: none
@@ -3411,42 +3459,123 @@ figure.graph-card {
 
 .gp-dpad {
   display: grid;
-  grid-template-columns: repeat(3, 47px);
-  grid-template-rows: repeat(2, 47px);
-  gap: 6px
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(2, 56px);
+  gap: 8px
 }
 
 .gp-side {
   display: flex;
   flex-direction: column;
-  gap: 6px
+  gap: 8px;
+  align-items: stretch
 }
 
 .gp {
-  min-width: 47px;
-  min-height: 47px;
-  border-radius: 12px;
-  background: var(--panel2);
-  border: 1px solid var(--border2);
+  min-width: 56px;
+  min-height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(#23252d, #1a1c22);
+  border: 1px solid #32353f;
+  box-shadow: 0 3px 0 #0a0b0e;
   color: var(--text);
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  touch-action: none
+  gap: 1px;
+  line-height: 1;
+  touch-action: none;
+  transition: transform .06s ease, box-shadow .06s ease, background-color .06s ease
 }
 
-.gp-wide {
-  min-width: 92px;
-  font-size: 0.78125rem;
-  font-weight: 600
+.gp .gp-lbl {
+  font-size: 0.5625rem;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: var(--faint)
+}
+
+.gp-fire {
+  min-width: 112px;
+  min-height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(#2b3a55, #1e2a40);
+  border-color: #3d5c8a;
+  color: #cfe2ff
+}
+
+.gp-fire .gp-glyph {
+  font-weight: 700;
+  font-size: 0.9375rem
+}
+
+.gp-q {
+  min-height: 48px
 }
 
 .gp.on,
 .gp:active {
   background: var(--acc-soft);
   border-color: var(--acc-line);
+  color: var(--acc);
+  transform: translateY(3px);
+  box-shadow: none
+}
+
+.gp.on .gp-lbl,
+.gp:active .gp-lbl {
   color: var(--acc)
+}
+
+/* ===== NEW v16.1 · immersive full screen (.fs is toggled by
+   setupGameFs in app.js while the wrap is the fullscreen element) ===== */
+.game-wrap.fs {
+  background: #06070a;
+  gap: 0
+}
+
+.game-wrap.fs .game-meta {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  margin: 0;
+  padding: 10px 12px;
+  background: linear-gradient(rgba(4, 5, 8, .88), rgba(4, 5, 8, 0));
+  border-radius: 0
+}
+
+.game-wrap.fs .game-help {
+  display: none
+}
+
+.game-wrap.fs .game-canvas {
+  border: none;
+  border-radius: 0;
+  max-width: 100%;
+  max-height: 100%
+}
+
+/* in full screen the pad floats over the bottom of the canvas: the whole
+   screen belongs to the game (the fullscreen element is the containing
+   block, so absolute anchors to the wrap == the screen) */
+.game-wrap.fs .game-pad {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  background: linear-gradient(rgba(4, 5, 8, 0), rgba(4, 5, 8, .82) 60%);
+  border-top: none
+}
+
+.gm-actions {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: auto
 }
 
 @keyframes sheet-in {
@@ -3495,21 +3624,58 @@ figure.graph-card {
     transform: none
   }
 
-  /* the drawer covers most of the phone */
+  /* the drawer covers most of the phone, but starts BELOW the mobile
+     header (v16.1): the ☰ button stays visible and re-tapping it closes
+     the drawer, exactly like the sidebar icon on desktop */
   .drawer {
+    left: 0;
+    top: 54px;
     width: min(86vw, 348px)
+  }
+
+  .drawer-bg {
+    left: 0;
+    top: 54px
   }
 
   /* the game canvas sits right above the on-screen pad, with no dead
      space: the stage wraps the canvas instead of reserving half the
-     viewport, and the pad + help follow immediately */
+     viewport, and the pad + help follow immediately
+     ===== CHANGED v16.1 · edge-to-edge game tab: no panel padding, dark
+     stage, full-width canvas — the phone feels like a console ===== */
+  .m-panel.gioco-panel {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0
+  }
+
+  .gioco-panel .game-wrap {
+    background: #0b0c10;
+    gap: 0
+  }
+
+  .gioco-panel .game-meta {
+    padding: 8px 12px;
+    background: #101116
+  }
+
   .game-stage {
     flex: 0 0 auto;
     min-height: 0
   }
 
   .game-canvas {
-    max-height: 42vh
+    width: 100%;
+    max-height: 48vh;
+    border-radius: 0;
+    border-left: none;
+    border-right: none
+  }
+
+  .gioco-panel .game-help {
+    margin: 0 12px;
+    padding: 8px 0 10px
   }
 }
 

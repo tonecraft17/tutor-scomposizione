@@ -91,7 +91,7 @@ python3 -m http.server 8000
 
 Go to **<http://localhost:8000>**. On the first Python command the browser downloads the Pyodide runtime from the CDN (~10 MB, once); after a few seconds the Console is ready.
 
-> **Note on caching**: `python -m http.server` sends no cache headers and the browser may serve stale module versions after an update. That's what **`serve.py`** exists for (`Cache-Control: no-store`): use it as your dev server. With `python -m http.server`, do a hard refresh (**Ctrl+F5** / **Cmd+Shift+R**) after every update. `index.html` also loads `app.js` and `styles.css` with a version marker (`?v=…`): bump it at every release.
+> **Note on caching**: `python -m http.server` sends no cache headers and the browser may serve stale module versions after an update. That's what **`serve.py`** exists for (`Cache-Control: no-store`): use it as your dev server. With `python -m http.server`, do a hard refresh (**Ctrl+F5** / **Cmd+Shift+R**) after every update. `index.html` also loads `app.js` and `styles.css` with a version marker (`?v=…`): bump it at every release — **and since v16.1 the same `?v=` rides on every ES-module import and `modulepreload` href** (a stale service worker can no longer mix an old `engine/dock.js` with a new `app.js`).
 >
 > **Note on the service worker** (v15): on `https://` (e.g. GitHub Pages) a service worker caches the app's static assets for repeat visits — the HTML stays network-first, so deploys are always picked up. It never activates in local development (serve.py / `no-store`); to test it locally open `http://localhost:8000/?sw`.
 
@@ -141,7 +141,7 @@ tutor-scomposizione/
 ├── test_input_pygame.html      # manual page: Pygame game input
 ├── test_runtime_plotly.html    # manual page: Plotly runtime
 │
-├── CHANGELOG-v5.md … CHANGELOG-v15.md   # the full version history
+├── CHANGELOG-v5.md … CHANGELOG-v16.1.md # the full version history
 ├── README.md                   # this file
 ├── LICENSE                     # MIT
 └── .gitignore

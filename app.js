@@ -1,21 +1,33 @@
 /* ============================================================
    APP · entry point: joins the modules and starts the app
    ============================================================ */
-import { APP, KEYS, supabaseConfigured, PLOTLY_JS } from './config.js';
-import { CH, EX, ORDER, TOTAL_EX, ROADMAP, codiceEsercizio } from './data/exercises.js';
-import { createDock, isMobile, icon } from './engine/dock.js';
+/* ===== NEW v16.1 · every ES-module import now carries the same ?v=16.1
+   query as the <script>/<link> tags in index.html. WHY: the service worker
+   caches same-origin GETs by their FULL URL (query included), and the
+   module files used to have NO version in their URL. On the first visit
+   after a deploy the old worker was still in control and served the OLD
+   engine/*.js from its cache while app.js arrived fresh (its ?v= had
+   changed): a mixed app where the activity-bar buttons called a dock that
+   no longer knew the 'moduli' panel — “the tab does not open”. With the
+   version on every specifier a release changes ALL module URLs, so even a
+   stale worker cache-misses and fetches the fresh, consistent set. The
+   specifiers must stay character-for-character identical to the
+   modulepreload hrefs in index.html, or each file would be fetched twice. ===== */
+import { APP, KEYS, supabaseConfigured, PLOTLY_JS } from './config.js?v=16.1';
+import { CH, EX, ORDER, TOTAL_EX, ROADMAP, codiceEsercizio } from './data/exercises.js?v=16.1';
+import { createDock, isMobile, icon } from './engine/dock.js?v=16.1';
 import {
   stateFor, righeUtente, righeUtenteRaw, righeUtenteConCommenti, conRientro, checkStep, assistLabel, assistSummary,
   autonomiaOf, globalStats, nextExercise, verificaOutput
-} from './engine/tutor.js';
+} from './engine/tutor.js?v=16.1';
 import {
   runPythonCode, getStatus, onPythonStatus,
   onMatplotlibImage, onPlotlyFigure, onPygameFrame,
   onPythonRunEnd, sendPygameEvent, stopPygameGame
-} from './engine/python-runner.js'; // ===== MODIFIED =====
-import * as storage from './engine/storage.js';
-import * as solDb from './engine/solutions-db.js'; // ===== NEW · local solutions database =====
-import { PONTE } from './engine/ponte.js'; // ===== NEW v12.1 · bridge from exercise lines → project =====
+} from './engine/python-runner.js?v=16.1'; // ===== MODIFIED =====
+import * as storage from './engine/storage.js?v=16.1';
+import * as solDb from './engine/solutions-db.js?v=16.1'; // ===== NEW · local solutions database =====
+import { PONTE } from './engine/ponte.js?v=16.1'; // ===== NEW v12.1 · bridge from exercise lines → project =====
 
 /* ---------- UI utilities ---------- */
 const $ = s => document.querySelector(s);
@@ -521,7 +533,11 @@ function renderGrafici(box) {
    watchable but not playable. The pad sends the SAME KEYDOWN/KEYUP
    events the canvas keyboard handler sends (pygame constants), so the
    runtime sees no difference. It only mounts on mobile and is visible
-   while GAME.active (updateGameMeta toggles it). */
+   while GAME.active (updateGameMeta toggles it).
+   ===== CHANGED v16.1 · redesigned for immersion: bigger glassy keys with
+   a pressed-look shadow, a wider pill for the fire button, labels under
+   the glyphs, and a safe-area-aware bar. The same pad is reused in full
+   screen mode, where it floats over the bottom of the canvas. ===== */
 function buildGamePad() {
   const pad = elHtml(`<div class="game-pad" id="gamePad" hidden>
     <div class="gp-dpad" role="group" aria-label="Directional pad">
@@ -531,8 +547,8 @@ function buildGamePad() {
       <button class="gp" data-key="K_RIGHT" aria-label="Right">▶</button>
     </div>
     <div class="gp-side">
-      <button class="gp gp-wide" data-key="K_SPACE" aria-label="Space / fire">␣ fire</button>
-      <button class="gp" data-key="K_q" aria-label="Quit the game (q key)">q</button>
+      <button class="gp gp-fire" data-key="K_SPACE" aria-label="Space / fire"><span class="gp-glyph">␣</span><span class="gp-lbl">fire</span></button>
+      <button class="gp gp-q" data-key="K_q" aria-label="Quit the game (q key)"><span class="gp-glyph">q</span><span class="gp-lbl">quit</span></button>
     </div>
   </div>`);
   pad.querySelectorAll('button.gp').forEach(b => {
@@ -562,6 +578,9 @@ function buildGamePad() {
 }
 function renderGioco(box) {
   box.innerHTML = '';
+  /* ===== NEW v16.1 · the panel container is marked so the mobile layout
+     can go edge-to-edge (no padding, dark stage) for immersion ===== */
+  box.classList.add('gioco-panel');
   const wrap = elHtml(`<div class="game-wrap"></div>`);
   if (!GAME.lastFrame) {
     wrap.appendChild(elHtml(`<div class="game-empty">No frames yet. Run a program with <code>pygame.display.flip()</code>: the game appears here — and it's <b>playable</b> (keyboard and mouse pass through to the canvas).</div>`));
@@ -569,7 +588,10 @@ function renderGioco(box) {
     wrap.appendChild(elHtml(`<div class="game-meta" id="gameMeta">
       <span class="dim"><b>${GAME.meta.w}×${GAME.meta.h}</b></span>
       <span class="st">${GAME.active ? '🎮 <b>running</b> — click the canvas and play' : 'last frame: ' + new Date(GAME.meta.ts).toLocaleTimeString('en-GB')}</span>
-      <button class="btn tiny danger" id="gameStopBtn" title="Closes the running game (even if it stopped responding)">■ Stop</button>
+      <span class="gm-actions">
+        <button class="btn tiny" id="gameFsBtn" title="Full screen — immersive mode (mobile: auto-landscape)" aria-label="Toggle full screen immersive mode">⛶ full screen</button>
+        <button class="btn tiny danger" id="gameStopBtn" title="Closes the running game (even if it stopped responding)">■ Stop</button>
+      </span>
     </div>`));
     /* FIX v8 · the canvas lives in a flexible stage: it fills the
        remaining space and resizes (proportionally) instead of being
@@ -584,15 +606,63 @@ function renderGioco(box) {
        keyboard, so the game was not playable there. ===== */
     if (isMobile()) wrap.appendChild(buildGamePad());
     wrap.appendChild(elHtml(`<div class="game-help">${isMobile()
-      ? '📱 Tap the canvas or use the <b>on-screen pad</b> below it: ◀ ▲ ▼ ▶ move · ␣ fire · q quits. ■ Stop closes the game.'
-      : '🖱 Click the canvas to activate the keyboard: <span class="kbd">←</span><span class="kbd">→</span><span class="kbd">↑</span><span class="kbd">↓</span> move, <span class="kbd">space</span> shoots, <span class="kbd">q</span> exits. The mouse passes straight to the game.'}</div>`));
+      ? '📱 Play with the <b>on-screen pad</b>: ◀ ▲ ▼ ▶ move · ␣ fire · q quits. <b>⛶ full screen</b> for maximum immersion (the phone rotates by itself where supported). ■ Stop closes the game.'
+      : '🖱 Click the canvas to activate the keyboard: <span class="kbd">←</span><span class="kbd">→</span><span class="kbd">↑</span><span class="kbd">↓</span> move, <span class="kbd">space</span> shoots, <span class="kbd">q</span> exits. The mouse passes straight to the game. <b>⛶ full screen</b> hides everything else.'}</div>`));
     const stopBtn = wrap.querySelector('#gameStopBtn');
     stopBtn.style.display = GAME.active ? '' : 'none';
     stopBtn.addEventListener('click', () => { stopPygameGame(); toast('Game close requested…', ''); });
+    /* ===== NEW v16.1 · immersive full screen: the whole game wrap (meta
+       bar + stage + pad) becomes the fullscreen element, so the canvas
+       fills the screen, the pad floats over its bottom edge and the meta
+       bar becomes a translucent overlay. On phones it also asks the
+       orientation to lock to landscape (best effort: iOS Safari refuses,
+       the help text invites a hand rotation). Esc / ⛶ exits. ===== */
+    setupGameFs(wrap);
     attachGameInput(cv);
   }
   box.appendChild(wrap);
   requestAnimationFrame(() => { drawGameFrame(); if (GAME.focused) { const c = document.getElementById('gameCanvas'); if (c) c.focus(); } });
+}
+
+/* ===== NEW v16.1 · full screen for the Game panel =====
+   One document-level listener (installed once) keeps every #gameFsBtn in
+   sync with the real fullscreen state: the panel re-renders often (new
+   frame, tab switch) and must never accumulate listeners. */
+let _gameFsListenerOn = false;
+function setupGameFs(wrap) {
+  const btn = wrap.querySelector('#gameFsBtn');
+  if (!btn) return;
+  const sync = () => {
+    const on = document.fullscreenElement === wrap;
+    wrap.classList.toggle('fs', on);
+    btn.textContent = on ? '⤡ exit' : '⛶ full screen';
+    btn.setAttribute('aria-label', on ? 'Exit full screen' : 'Enter full screen (immersive mode)');
+  };
+  btn.addEventListener('click', async () => {
+    try {
+      if (document.fullscreenElement === wrap) {
+        await document.exitFullscreen();
+      } else {
+        await wrap.requestFullscreen();
+        /* landscape fills the phone: best effort, silently ignored where
+           unsupported (iOS Safari: the user rotates by hand) */
+        if (screen.orientation && typeof screen.orientation.lock === 'function') {
+          screen.orientation.lock('landscape').catch(() => { });
+        }
+      }
+    } catch (err) {
+      toast('⚠ Full screen is not available in this browser (or was blocked).', 'warn');
+    }
+  });
+  if (!_gameFsListenerOn) {
+    _gameFsListenerOn = true;
+    document.addEventListener('fullscreenchange', () => {
+      document.querySelectorAll('#gameFsBtn').forEach(b => {
+        const w = b.closest('.game-wrap'); if (w) { w.classList.toggle('fs', document.fullscreenElement === w); b.textContent = document.fullscreenElement === w ? '⤡ exit' : '⛶ full screen'; }
+      });
+    });
+  }
+  sync();
 }
 
 /* ---------- application state ---------- */
@@ -980,6 +1050,13 @@ async function eseguiEsercizio(e) {
      in the console. Now the console says "🎮 game run" with the
      help for playing, as already happened for games stopped by the timeout. */
   if (res.ok && GAME.meta.ts > mediaBefore.f) run.game = true;
+  /* ===== NEW v16.1 · a chart produced by THIS run is recorded on the run
+     itself: plotting exercises (16-9 "World Fires", 16-1…) print nothing,
+     and the console block used to say "(no output: so far your code only
+     defines names)" — the exact opposite of the truth, and the student
+     read it as "my solution is rejected". Now the block points to the
+     Charts panel, and on the phone the app switches straight to it. ===== */
+  if (res.ok && GRAPHS.items.length > mediaBefore.g) run.chart = true;
   st.runs.push(run); st.runs = st.runs.slice(-12);
   if (res.ok) {
     const soAll = e.steps.flatMap(s => s.so || []);
@@ -1007,9 +1084,20 @@ async function eseguiEsercizio(e) {
     } else {
       if (ver && ver.ok) toast((mod ? '⌨ modified version — ' : '') + '✓ Output verified: it matches the output expected by the book!', 'ok');
       else if (mod) toast('⌨ Modified program run: output in the Console and in the Code editor.', 'ok');
+      /* ===== NEW v16.1 · chart-only runs get their own message: the output
+         is not "missing", it lives in the Charts panel ===== */
+      else if (run.chart && !outputUtile(res.output).trim())
+        toast((mod ? '⌨ modified version — ' : '') + '📊 The program drew a chart: open the <b>Charts</b> panel to see it.', 'ok');
       else toast('Program run: open the Console for the output.', 'ok');
     }
-    if (isMobile()) { dock.setMobileTab('console'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+    /* ===== CHANGED v16.1 · where the phone lands after the run: the panel
+     that actually holds the result — the Game for a game, the Charts for a
+     chart, the Console otherwise. Before, a chart run dumped the student
+     on an empty-looking console. ===== */
+    if (isMobile()) {
+      dock.setMobileTab(run.game ? 'gioco' : (run.chart && !outputUtile(res.output).trim() ? 'grafici' : 'console'));
+      dock.renderMobilePanel(); dock.renderMobileNav();
+    }
   } else if (res.error && res.error.tipo === 'TimeoutError' && GAME.meta.ts > mediaBefore.f) {
     // ===== MODIFIED · a Pygame game had been running a while without closing:
     // the watchdog stopped it: it's not a student error =====
@@ -1074,6 +1162,7 @@ async function eseguiProgetto(e, st, mod) {
   const run = { t: nowT(), dur: res.durataMs, out: res.output || '', err: res.error || null, entry, proj: nFile };
   if (mod) run.custom = true;
   if (res.ok && GAME.meta.ts > mediaBefore.f) run.game = true;
+  if (res.ok && GRAPHS.items.length > mediaBefore.g) run.chart = true;   // ===== NEW v16.1 · see eseguiEsercizio =====
   if (!res.ok && res.error && res.error.tipo === 'TimeoutError' && GAME.meta.ts > mediaBefore.f) {
     run.err = null; run.game = true;   // game closed by the watchdog: not an error
   }
@@ -1085,8 +1174,15 @@ async function eseguiProgetto(e, st, mod) {
     const soAll = e.steps.flatMap(s => s.so || []);
     const ver = verificaOutput(soAll, res.output || '');
     if (ver) st.verificato = ver.ok; else delete st.verificato;
-    toast((mod ? '⌨ modified version — ' : '') + 'full program run (' + nFile + ' files): output in the Console and in the ⌨ editor.', 'ok');
-    if (isMobile()) { dock.setMobileTab('console'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+    /* ===== CHANGED v16.1 · chart-only project runs: message + phone
+       landing panel follow the actual result (Charts), not the console ===== */
+    if (run.chart && !outputUtile(res.output).trim()) {
+      toast((mod ? '⌨ modified version — ' : '') + '📊 The program drew a chart: open the <b>Charts</b> panel to see it.', 'ok');
+      if (isMobile()) { dock.setMobileTab('grafici'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+    } else {
+      toast((mod ? '⌨ modified version — ' : '') + 'full program run (' + nFile + ' files): output in the Console and in the ⌨ editor.', 'ok');
+      if (isMobile()) { dock.setMobileTab('console'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+    }
   } else {
     toast((mod ? '⌨ modified version — ' : '') + 'execution error: open the Console for the translated traceback.', 'err');
     if (isMobile()) { dock.setMobileTab('console'); dock.renderMobilePanel(); dock.renderMobileNav(); }
@@ -1129,21 +1225,26 @@ async function eseguiSoluzione(e, sol, st, automatica, nomeMancante) {
      that the full solution was the playable game in the Game panel. */
   const soluzioneGioco = GAME.meta.ts > mediaBefore.f;
   if (res.ok && soluzioneGioco) run.game = true;
+  const soluzioneGrafico = GRAPHS.items.length > mediaBefore.g;   // ===== NEW v16.1 · chart runs of the official solution are labeled as such =====
+  if (res.ok && soluzioneGrafico) run.chart = true;
   st.runs.push(run); st.runs = st.runs.slice(-12);
   /* FIX v8 · if the solution is a GAME, the toast says so clearly:
      before it only mentioned the "Console" and the student didn't open the
      Game panel. NB: this toast arrives at the end of the game (the start is
      announced by "🎮 Game started" on the first frame): the text invites
-     replaying. */
+     replaying. ===== CHANGED v16.1 · chart solutions get their destination
+     too (the Charts panel), instead of pointing at an empty console. ===== */
   const dove = run.game
     ? 'it was the <b>game</b>: review it in the <b>Game</b> panel — to replay, press ▶ run again'
-    : 'see the Console';
+    : (run.chart && !outputUtile(run.out).trim()
+        ? 'it drew a <b>chart</b>: see it in the <b>Charts</b> panel'
+        : 'see the Console');
   toast(automatica
     ? (nomeMancante
       ? `🧩 Your code uses the name "${esc(nomeMancante)}" which is not yet defined: this is a step that modifies a larger program and cannot run on its own. The <b>full solution</b> ${dove}.`
       : `🧰 Your code doesn't produce output yet (it only defines classes/functions): the full solution ${dove}.`)
-    : `📚 Solution run: ${run.game ? 'game in the <b>Game</b> panel, output in the Console.' : 'output in the Console.'}`, 'ok');
-  if (isMobile()) { dock.setMobileTab(run.game ? 'gioco' : 'console'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+    : `📚 Solution run: ${run.game ? 'game in the <b>Game</b> panel, output in the Console.' : (run.chart && !outputUtile(run.out).trim() ? 'chart in the <b>Charts</b> panel.' : 'output in the Console.')}`, 'ok');
+  if (isMobile()) { dock.setMobileTab(run.game ? 'gioco' : (run.chart && !outputUtile(run.out).trim() ? 'grafici' : 'console')); dock.renderMobilePanel(); dock.renderMobileNav(); }
   saveProgress(); dock.refreshPanels(['console', 'esercizio', 'progressi']); updateCodiceOut(); renderStatus();
 }
 /* ---------- EXERCISE panel ---------- */
@@ -2166,9 +2267,10 @@ function runBlockEl(r, e) {
   if (r.sol) {
     // ===== block of the official solution (double run) =====
     b.appendChild(elHtml(`<span class="run-cmd sol">📚 official solution · ${esc(solDb.indexFor(e.id) ? (solDb.indexFor(e.id).entry || 'local database') : 'local database')}</span>`));
-    b.appendChild(elHtml(`<span class="run-meta">${esc(r.t)} · ${r.dur} ms · ${r.game ? '🎮 game run' : 'solution output'}</span>`));
+    b.appendChild(elHtml(`<span class="run-meta">${esc(r.t)} · ${r.dur} ms · ${r.game ? '🎮 game run' : (r.chart ? '📊 chart run' : 'solution output')}</span>`));
     if (r.out) b.appendChild(elHtml(`<div class="run-out">${esc(r.out)}</div>`));
     if (r.game) b.appendChild(elHtml(`<span class="run-hint">🎮 The game (full solution) has been run in the Game panel: it's interactive — click the canvas and play.</span>`));
+    if (r.chart && !r.out) b.appendChild(elHtml(`<span class="run-hint">📊 The full solution drew its chart: open the <b>Charts</b> panel to see it.</span>`));   // v16.1
     if (r.err) {
       b.appendChild(elHtml(`<div class="run-err">${esc(r.err.tipo)}: ${esc(r.err.messaggio || '')}</div>`));
       if (r.err.hint) b.appendChild(elHtml(`<span class="run-hint">${esc(r.err.hint)}</span>`));
@@ -2177,7 +2279,13 @@ function runBlockEl(r, e) {
     b.appendChild(elHtml(`<span class="run-cmd">student@tutor:~$ python ${esc(r.entry || fileSafe(e.id) + '.py')}</span>`));
     b.appendChild(elHtml(`<span class="run-meta">${esc(r.t)} · ${r.dur} ms · ${r.game ? '🎮 game run' : (r.err ? 'exit with error' : 'clean exit')}${r.proj ? ' · full program (' + r.proj + ' files)' : ''}${r.custom ? ' · ⌨ modified version' : ''}</span>`));
     if (r.out) b.appendChild(elHtml(`<div class="run-out">${esc(r.out)}</div>`));
-    if (!r.out && !r.err && !r.game) b.appendChild(elHtml(`<div class="run-out muted" style="opacity:.55">(no output: so far your code only defines names)</div>`));
+    /* ===== CHANGED v16.1 · chart runs: the old "(no output: so far your
+       code only defines names)" fired for every plotting exercise (16-9
+       "World Fires"…), because fig.show() prints nothing: the student
+       read it as a rejected solution. A chart IS the output — the block
+       now says where to find it. ===== */
+    if (!r.out && r.chart) b.appendChild(elHtml(`<div class="run-out" style="color:var(--acc)">📊 The program produced a chart: open the <b>Charts</b> panel to see it.</div>`));
+    if (!r.out && !r.err && !r.game && !r.chart) b.appendChild(elHtml(`<div class="run-out muted" style="opacity:.55">(no output: so far your code only defines names)</div>`));
     if (r.game) b.appendChild(elHtml(`<span class="run-hint">🎮 Game run in the Game panel: click the canvas to play (arrows/space/q) and "■ Stop" to close it.</span>`));
     if (r.err) {
       b.appendChild(elHtml(`<div class="run-err">${esc(r.err.tipo)}: ${esc(r.err.messaggio || '')}</div>`));
@@ -2885,7 +2993,10 @@ const dock = createDock({
      dock tab: they open the Modules drawer and the Guide overlay. ===== */
   specialPanels: { moduli: true, guida: true },
   onSpecial: pid => { if (pid === 'moduli') toggleDrawer(); else if (pid === 'guida') toggleGuida(); },
-  onLayoutChange: () => { renderStatus(); },
+  /* ===== CHANGED v16.1 · every layout/tab change restores the auto-hidden
+     header: a freshly rendered panel starts at scrollTop 0, where an
+     upward flick is impossible and the bar would stay trapped off-screen. ===== */
+  onLayoutChange: () => { renderStatus(); document.body.classList.remove('head-off'); },
 });
 
 /* dock-generated elements (activity bar, tab bars) are decorated too:
@@ -2981,6 +3092,31 @@ function init() {
   });
   let rzT = null;
   window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => dock.applyMode(false), 160); });
+  /* ===== NEW v16.1 · auto-hide header (titlebar on desktop, m-head on
+     mobile): the page itself never scrolls (panels do), so the watcher
+     listens — in capture phase — to the scroll of every scrollable app
+     container (.dk-body panels, .m-content, the drawer and overlay
+     bodies). Scrolling DOWN hides the bar (immersion: the code wins the
+     space); scrolling UP, or returning to the top, brings it back. A small
+     dead zone (6px) keeps the trigger away from sub-pixel jitters and
+     momentum artifacts. ===== */
+  /* .dk-panel is the real scrollable element of every dock panel (absolute,
+     overflow:auto inside .dk-body); .m-content is the mobile view */
+  const SCROLLABLE_SEL = '.dk-panel, .m-content, .drawer-body, .ovl-body';
+  const lastScrollPos = new WeakMap();
+  document.addEventListener('scroll', ev => {
+    const t = ev.target;
+    if (!(t instanceof Element) || !t.matches(SCROLLABLE_SEL)) return;
+    const y = t.scrollTop, last = lastScrollPos.get(t) || 0;
+    lastScrollPos.set(t, y);
+    if (y > last + 6 && y > 48) document.body.classList.add('head-off');
+    else if (y < last - 6 || y <= 6) document.body.classList.remove('head-off');
+  }, true);
+  /* opening a drawer/overlay or switching tab always brings the bar back:
+  no trap of an invisible header on a freshly-rendered view */
+  const headBack = () => document.body.classList.remove('head-off');
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') headBack(); }, true);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', headBack);
   if (!storage.getSeen()) {
     /* ===== CHANGED v16 · on a phone the six toast cascade over 23 s
        felt like a pop-up storm: two compact ones are enough. Desktop

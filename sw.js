@@ -35,13 +35,14 @@
    outside the startup critical path.
 
    Deploy checklist (every release):
-     1. bump ?v=16.0 (…) on app.js/styles.css in index.html;
+     1. bump ?v= (…on app.js/styles.css in index.html AND on every ES-module
+        import specifier + modulepreload href — see the v16.1 note in app.js);
      2. bump CACHE below to the same version;
      3. push — the next visit updates the worker, purges the old
         cache and re-caches the new assets on demand.
    ============================================================ */
 
-const CACHE = 'tutor-v16';
+const CACHE = 'tutor-v16.1';   // ===== CHANGED v16.1 · bump together with ?v= in index.html
 
 self.addEventListener('install', () => {
   /* take over as soon as the new worker is ready: no stale window
