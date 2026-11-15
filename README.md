@@ -1,6 +1,6 @@
 # Tutor · Progressive Breakdown — Python Crash Course
 
-An **interactive study environment** for the exercises of *Python Crash Course* (3rd edition, chapters 1–20 + appendices D–E): **199 exercises** and **485 guided steps**, with **real Python running in the browser** (Pyodide) — no installation, no account, everything local.
+An **interactive study environment** for the exercises of *Python Crash Course* (3rd edition, chapters 1–20 + appendices D–E): **199 exercises** and **485 guided steps**, with **real Python running in the browser** (Pyodide) — no installation, works offline after the first load, **optional free account** to sync your progress across devices.
 
 ```text
 study an exercise → break it down into steps → write the lines → really run it
@@ -16,7 +16,9 @@ study an exercise → break it down into steps → write the lines → really ru
 - **The progressive breakdown method**: every exercise is split into steps verified one by one; the **⌨ Code** editor shows the complete program, the **✎ Lines** editor only your exercise's lines.
 - **⚙ Bridge to the project**: for exercises that are fragments of a bigger project (e.g. 14-3 «Challenging Target Practice»), the lines you edit in ✎ flow into the project's real modules (`settings.py`, `target_practice.py`…) and the output changes accordingly.
 - **Progress saved locally** (localStorage) with every exercise, step and terminal run; **optional** cloud sync via Supabase (off by default).
-- **No build step, no npm dependencies**: native ES modules + one CSS file. Serve it with any static server.
+- **Two themes, one click** (v17): dark (default) and a playful light one — both keep the **terminals and every code-writing area black**. Switch and manage credentials/privacy from the **⚙ Settings** overlay (last icon of the sidebar).
+- **Account in the top-right corner** (v17): avatar + exercises-completed counter; a click opens the summary popover (progress, autonomy, sync) with the “edit” bridge to Settings.
+- **No build step, no npm dependencies**: native ES modules + CSS. Serve it with any static server.
 
 ---
 
@@ -29,7 +31,7 @@ study an exercise → break it down into steps → write the lines → really ru
 | Charts | `matplotlib` (PNG via the AGG backend), `plotly` 2.35 (via micropip + native numpy/pandas) |
 | Tests | `pytest` executed in the in-browser runtime |
 | Network | `requests` + `pyodide-http` (browser fetch) for the ch. 17 APIs |
-| Frontend | **vanilla JavaScript** in **ES modules** (zero frameworks, zero build step), custom CSS (dark theme, VS Code-style dock layout, dedicated mobile view) — plus `styles-light.css`, an optional light test theme (v16.2) |
+| Frontend | **vanilla JavaScript** in **ES modules** (zero frameworks, zero build step), custom CSS (dark theme, VS Code-style dock layout, dedicated mobile view) + `styles-light.css`, the **light half of the v17 theme switch** (every rule scoped under `[data-theme="light"]`) |
 | Storage | **localStorage** (progress, layout) + **IndexedDB** (local solutions database: per-chapter bundles from `data/solutions/`, seeded on first use of each chapter — v14) |
 | Cloud (optional) | Supabase (progress sync across devices) — see [Optional configuration](#optional-configuration-supabase) |
 | Dev tests | Node.js ≥ 18 (`node test_*.mjs`, no dependencies to install) |
@@ -48,9 +50,9 @@ study an exercise → break it down into steps → write the lines → really ru
 
 | Editor | What it holds | Who it's for |
 |---|---|---|
-| **Exercise panel** | the exercise's steps, one at a time, with verification | following the book step by step |
+| **Exercise panel** | the exercise's steps, one at a time, with verification — the writing zone grows with your code (v18) | following the book step by step |
 | **✎ Lines** | only your exercise's lines (those of "Exercise completed"), without the surrounding code — plus the **⚙ bridge** linking them to the project's modules | changing the values that matter (speeds, lives, scores…) |
-| **⌨ Code** | the complete program: file by file, from the `import`s to the end, with the project's support modules | seeing the whole picture, rewriting everything |
+| **⌨ Code** | the complete program: file by file, from the `import`s to the end, with the project's support modules. **Editors only** (v18): no terminal below — the output of ▶ Run lands in the **Console** tab | seeing the whole picture, rewriting everything |
 
 ---
 
@@ -102,8 +104,8 @@ Go to **<http://localhost:8000>**. On the first Python command the browser downl
 ```text
 tutor-scomposizione/
 ├── index.html                  # single page: dock, activity bar, mobile view
-├── styles.css                  # dark theme, dock layout, panels, mobile
-├── styles-light.css            # TEST-ONLY light theme (rounded, lighter colors) — not part of the main project (v16.2)
+├── styles.css                  # dark theme (default), dock layout, panels, mobile
+├── styles-light.css            # LIGHT theme of the Settings switch — scoped [data-theme=light], terminals/code stay black (v17)
 ├── app.js                      # the application: panels, ✎/⌨ editors, bridge, execution
 ├── serve.py                    # dev server (caching disabled) — recommended
 ├── config.js                   # CDN endpoints, runtime constants, localStorage keys
@@ -142,7 +144,7 @@ tutor-scomposizione/
 ├── test_input_pygame.html      # manual page: Pygame game input
 ├── test_runtime_plotly.html    # manual page: Plotly runtime
 │
-├── CHANGELOG-v5.md … CHANGELOG-v16.2.md # the full version history
+├── CHANGELOG-v5.md … CHANGELOG-v17.md    # the full version history
 ├── README.md                   # this file
 ├── LICENSE                     # MIT
 └── .gitignore
@@ -169,7 +171,9 @@ The two `test_*.html` files are manual pages to open via http, for trying Pygame
 
 ## Optional configuration: Supabase
 
-Cloud progress sync is **off by default** and the app works 100% without it. To enable it:
+Cloud progress sync is **off by default** and the app works 100% without it.
+Since the site is deployed (GitHub Pages or any static host), activating it
+takes five minutes:
 
 1. Create a project on [supabase.com](https://supabase.com) (free).
 2. Run `supabase/schema.sql` in the project's SQL editor.
@@ -183,7 +187,18 @@ export const SUPABASE = {
 };
 ```
 
-Use **only the anon key** (`anon public`), never the service key: the schema is protected by Row Level Security (each user sees only their own progress). No key is needed for local use.
+4. **Deploy-side checklist** (often forgotten):
+   - in Supabase → **Authentication → URL Configuration** set **Site URL** to
+     the deployed address (e.g. `https://USER.github.io/tutor-scomposizione/`),
+     so confirmation/recovery emails land on the right pages;
+   - use **only the anon key** (`anon public`), never the service key: the
+     schema is protected by Row Level Security (each user sees only their
+     own progress);
+   - on the next load the app pings `GET {url}/auth/v1/health` — if the pair
+     is wrong you get a toast and `sync ✗` in the status bar immediately
+     (v18), instead of a silent local mode.
+
+No key is needed for local use; the same `config.js` works from `localhost`.
 
 ---
 

@@ -32,6 +32,8 @@ const ICONS = {
   filecode:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z"/><path d="M14.5 3v5.5H19"/><path d="m10 12.5 2 2-2 2"/><path d="M13.5 16.5h2.5"/></svg>`,
   /* NEW v12 · «Lines» panel (light editor: only the exercise's lines) */
   rows:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14"/><path d="M5 9h9"/><path d="M5 13h14"/><path d="M5 17h9"/><path d="M19 15.5v4"/><path d="m16.8 17.5 2.2-2 2.2 2"/></svg>`,
+  /* NEW v17 · Settings (bottom of the activity bar, opens the overlay) */
+  gear:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1.87z"/></svg>`,
 };
 export function icon(n){ return ICONS[n] || ''; }
 
@@ -50,26 +52,38 @@ export function createDock(opts){
   const specialPanels = opts.specialPanels || {};
   const onSpecial = opts.onSpecial || (()=>{});
 
+  /* ===== CHANGED v18 · ONE name per button, no parentheses, and each
+     name is EXACTLY the title of the tab/overlay it opens — what you
+     read on the expanded sidebar is what lands in the tab bar:
+       Modules → drawer "Modules" · Exercise/Code/Lines/Console/Charts/
+       Game/Progress/Sandbox → the dock tab of the same name ·
+       Guide → the guide overlay · Settings → the settings overlay.
+     (The aria-label keeps a longer explanation for screen readers.) ===== */
   const ACT = [
-    ['moduli',   'files', 'Modules & exercises'],     // v16 · opens the side drawer
+    ['moduli',   'files', 'Modules'],     // v18 · opens the side drawer
     // ===== REMOVED v16.2 · the 'traccia' (Exercise walkthrough) panel is gone:
     //     its content already lives inside the Exercise panel (the "Exercise
     //     statement" details + the chapter-concept chips), so the tab was a
     //     duplicate. The activity bar and the mobile bar get one icon less. =====
-    ['esercizio','code',  'Active exercise'],
-    ['codice',   'filecode', 'Full code (editor + terminal)'],
-    ['righe',    'rows',    'Exercise lines (light editor)'],
-    ['console',  'term',  'Output console'],
+    ['esercizio','code',  'Exercise'],
+    ['codice',   'filecode', 'Code'],
+    ['righe',    'rows',    'Lines'],
+    ['console',  'term',  'Console'],
     /* ===== NEW v16 · the Charts and Game panels had NO icon in the
        activity bar: once their tab was closed there was no way back
        (except running a new program). Now they are first-class citizens
        of the left navigation bar, like every other panel. ===== */
-    ['grafici',  'chart', 'Charts (Matplotlib / Plotly)'],
-    ['gioco',    'flask', 'Game (Pygame)'],
-    ['progressi','chart', 'Progress & autonomy'],
-    ['guida',    'help',  'Method guide'],             // v16 · opens the overlay
-    ['sandbox',  'flask', 'Python sandbox (real runtime)'],
-    ['account',  'user',  'Account & sync'],
+    ['grafici',  'chart', 'Charts'],
+    ['gioco',    'flask', 'Game'],
+    ['progressi','chart', 'Progress'],
+    ['guida',    'help',  'Guide'],               // v16 · opens the overlay
+    ['sandbox',  'flask', 'Sandbox'],
+    /* ===== REMOVED v17 · 'account' moved OUT of the activity bar: the
+       account now lives in the TOP-RIGHT button of the titlebar (popover
+       with info + synthetic progress, "Edit" → Settings). The Account
+       PANEL survives (status-bar chip, mobile ⋯ More menu, the popover's
+       "open full panel"). ===== */
+    ['impostazioni', 'gear', 'Settings'],         // v17 · bottom icon, opens the settings overlay
   ];
   /* ===== CHANGED v16 · mobile tab management: the bottom bar keeps the
      tabs a phone actually uses between two taps (the exercise, the console
@@ -426,9 +440,16 @@ export function createDock(opts){
       if(pid==='sandbox'){ const sep=document.createElement('div'); sep.className='act-sep'; bar.appendChild(sep); }
       const special = specialPanels[pid];   // ===== NEW v16 · drawer / overlay triggers =====
       const extra = special
-        ? (pid === 'guida' ? ' (opens the guide overlay, not a dock tab)' : ' (opens the slide-out Modules menu, not a dock tab)')
+        ? (pid === 'guida' ? ' (opens the guide overlay, not a dock tab)'
+            : pid === 'impostazioni' ? ' (opens the settings overlay, not a dock tab)'   // ===== NEW v17 =====
+              : ' (opens the slide-out Modules menu, not a dock tab)')
         : '';
-      const b=elHtml(`<button class="act-btn" data-panel="${pid}"${special?' data-special="1"':''} title="${esc(title)}" aria-label="${esc(title)}${extra}">${icon(ic)}</button>`);
+      /* ===== CHANGED v17 · every button carries its LABEL: the bar is a
+         slim icon strip at rest and EXPANDS on hover/:focus-within to show
+         the full names (CSS only — see .activitybar in styles.css). The
+         label is always in the DOM (visibility, not presence) so screen
+         readers get the same text as sighted users on hover. ===== */
+      const b=elHtml(`<button class="act-btn" data-panel="${pid}"${special?' data-special="1"':''} title="${esc(title)}" aria-label="${esc(title)}${extra}">${icon(ic)}<span class="act-label">${esc(title)}</span></button>`);
       b.addEventListener('click', ()=>{ if(special){ onSpecial(pid); return; } togglePanel(pid); });   // ===== CHANGED v16 · toggle close + special panels =====
       bar.appendChild(b);
     });

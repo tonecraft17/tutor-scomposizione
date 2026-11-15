@@ -42,7 +42,7 @@
         cache and re-caches the new assets on demand.
    ============================================================ */
 
-const CACHE = 'tutor-v16.2';   // ===== CHANGED v16.2 · bump together with ?v= in index.html
+const CACHE = 'tutor-v18';   // ===== CHANGED v18 · bump together with ?v= in index.html
 
 self.addEventListener('install', () => {
   /* take over as soon as the new worker is ready: no stale window

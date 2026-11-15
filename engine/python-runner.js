@@ -1,7 +1,7 @@
 /* ============================================================
    ENGINE/PYTHON-RUNNER · orchestrator (main thread)
    ============================================================ */
-import { PYODIDE } from '../config.js?v=16.2'; // ===== CHANGED v16.1 · versioned specifier (stale-ServiceWorker fix, see app.js) =====
+import { PYODIDE } from '../config.js?v=18'; // ===== CHANGED v16.1 · versioned specifier (stale-ServiceWorker fix, see app.js) =====
 
 let worker=null, running=false, runSeq=0;
 let gameActive=false;   // ===== NEW v12.1 · a Pygame game sends frames during the ongoing run =====
@@ -37,7 +37,7 @@ function risolviWaiters(err){
 function spawnWorker(){
   /* ===== CHANGED v16.1 · the worker script carries the version too, so a
      stale ServiceWorker can never pair a fresh runner with an old worker ===== */
-  const w = new Worker(new URL('./python-worker.js?v=16.2', import.meta.url), { type:'module' });
+  const w = new Worker(new URL('./python-worker.js?v=18', import.meta.url), { type:'module' });
   w.addEventListener('message', ev=>{
     const m = ev.data;
     if(!m) return;

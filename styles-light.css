@@ -1,472 +1,450 @@
 /* ============================================================
-   TUTOR · styles-light.css — TEST-ONLY light theme (v16.2)
+   TUTOR · styles-light.css — THE LIGHT THEME (v17)
    ------------------------------------------------------------
-   Questo file NON fa parte del tema principale del progetto: è un
-   tema chiaro "user friendly" da usare come prova (bordi più
-   arrotondati, colori più chiari, superfici morbide).
+   This file is now PART OF THE PROJECT: it is the light half of the
+   dark/light switch in Settings → Appearance (the dark half is
+   styles.css, untouched). It is ALWAYS loaded — after styles.css —
+   but every rule is scoped under [data-theme="light"], so in dark
+   mode it costs nothing and the switch (applyTheme() in app.js)
+   flips <html data-theme> with NO reload and NO flash (the
+   bootstrap <script> in index.html applies the attribute before
+   the first paint).
 
-   HOW TO TEST (two equivalent ways — pick one):
-   1) REPLACE the stylesheet in index.html:
-        <link rel="stylesheet" href="styles.css?v=16.2">
-      becomes
-        <link rel="stylesheet" href="styles-light.css">
-   2) or ADD it right AFTER the main one (it only overrides):
-        <link rel="stylesheet" href="styles.css?v=16.2">
-        <link rel="stylesheet" href="styles-light.css">
-      (remove line 2 to go back to the dark theme)
+   THE RULE THE STUDENT ASKED FOR: in BOTH themes the terminals and
+   every code-WRITING area stay BLACK — a terminal is dark in any
+   theme, and the syntax colors are tuned for it. See section 6:
+   .codice-ta, .rg-ta, .sandbox-ta, .code-input, the consoles, the
+   step code blocks and the input() prompt all keep the dark
+   surfaces of styles.css (and color-scheme:dark, so their internal
+   scrollbars/carets match).
 
-   It imports the main stylesheet and re-decorates it: every layout
-   rule, every component size and all the behaviour (drawer, overlay,
-   full screen, mobile) come from styles.css — only colors, shadows
-   and radii change here. The two deliberately DARK survivors:
-   · the Console / terminal (a terminal is expected to be dark, and
-     its output colors are tuned for it);
-   · the immersive Game stage and the full-screen scrims (a game
-     screen is black in any theme).
-
-   Optional: for a coherent browser UI on a phone also change the
-   meta theme-color in index.html from #17181c to #eef1f6.
+   The light theme is NOT plain white: it is a PLAYFUL pastel set —
+   warm cream titlebar, baby-blue activity bar, mint status bar,
+   lilac workbench, white cards, violet accent, 14px base radius.
    ============================================================ */
 
-@import url("styles.css?v=16.2");
-
-/* ---------- 1 · palette ---------- */
-:root {
+/* ---------- 1 · palette (scoped: only when the attribute is on) ---------- */
+html[data-theme="light"] {
   color-scheme: light;
-  --bg: #eef1f6;
-  --bg2: #f6f8fb;
-  --panel: #ffffff;
-  --panel2: #f2f5f9;
-  --panel3: #e9edf4;
-  --border: #d8dfe9;
-  --border2: #c3cddb;
-  --text: #232a36;
-  --dim: #4d586b;
-  --faint: #5d6a80;
-  --acc: #2563eb;
-  --acc-soft: rgba(37, 99, 235, .10);
-  --acc-line: rgba(37, 99, 235, .45);
-  --ok: #15803d;
-  --ok-soft: rgba(21, 128, 61, .12);
-  --warn: #92400e;
-  --warn-soft: rgba(146, 64, 14, .10);
-  --err: #d1242f;
-  --err-soft: rgba(209, 36, 47, .10);
-  --purple: #7c3aed;
-  --yellow: #9a6700;
-  --cyan: #0e7490;
-  /* bordi arrotondati: il raggio base passa da 9 a 14 px */
+  --bg: #f3f0fa;            /* lilac workbench */
+  --bg2: #faf8ff;           /* near-white lilac */
+  --panel: #ffffff;         /* cards */
+  --panel2: #f4f1fb;
+  --panel3: #ece7f8;
+  --border: #ddd6ee;
+  --border2: #c8bfe4;
+  --text: #2e2a45;          /* dark plum */
+  --dim: #5c5580;
+  --faint: #6f6892;
+  --acc: #5b48e8;           /* violet */
+  --acc-soft: rgba(91, 72, 232, .10);
+  --acc-line: rgba(91, 72, 232, .42);
+  --ok: #0f9960;
+  --ok-soft: rgba(15, 153, 96, .12);
+  --warn: #a66a00;
+  --warn-soft: rgba(166, 106, 0, .10);
+  --err: #d2324e;
+  --err-soft: rgba(210, 50, 78, .10);
+  --purple: #8b3ee8;
+  --yellow: #9a6b00;
+  --cyan: #0b7f9e;
+  /* rounder: the playful theme doubles the base radius */
   --rad: 14px;
 }
 
 /* ---------- 2 · base ---------- */
-body {
-  background: var(--bg)
+html[data-theme="light"] body {
+  background: var(--bg);
+  color: var(--text);
 }
 
-::-webkit-scrollbar-thumb {
-  background: #c2cbd8;
+html[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #c9c2e0;
   border-radius: 8px;
   border: 2px solid transparent;
-  background-clip: padding-box
+  background-clip: padding-box;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #a9b4c5;
-  background-clip: padding-box
+html[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: #b0a5d6;
+  background-clip: padding-box;
 }
 
-::selection {
-  background: rgba(37, 99, 235, .18)
+html[data-theme="light"] ::selection {
+  background: rgba(91, 72, 232, .20);
 }
 
-/* ---------- 3 · chrome: titlebar, activity bar, statusbar, mobile ---------- */
-.titlebar {
-  background: #fbfcfe;
-  border-bottom: 1px solid #e3e8f0
+html[data-theme="light"] input:focus-visible,
+html[data-theme="light"] textarea:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: -1px;
 }
 
-.activitybar {
-  background: #f7f9fc;
-  border-right: 1px solid #e3e8f0
+/* ---------- 3 · chrome: one pastel per zone ---------- */
+/* titlebar: warm cream */
+html[data-theme="light"] .titlebar {
+  background: #fdf6ec;
+  border-bottom: 1px solid #f0e4cf;
 }
 
-.statusbar {
-  background: #fbfcfe;
-  border-top: 1px solid #e3e8f0
+/* activity bar: baby blue (expansion shadow softens too) */
+html[data-theme="light"] .activitybar {
+  background: #eef2fd;
+  border-right: 1px solid #dce4f8;
 }
 
-.m-head {
+html[data-theme="light"] .activitybar:hover,
+html[data-theme="light"] .activitybar:focus-within {
+  box-shadow: 18px 0 46px rgba(90, 70, 160, .22);
+}
+
+html[data-theme="light"] .act-btn:hover {
+  background: #e2e9fb;
+}
+
+html[data-theme="light"] .act-btn.active::before {
+  background: var(--acc);
+}
+
+/* status bar: mint */
+html[data-theme="light"] .statusbar {
+  background: #ecf8f0;
+  border-top: 1px solid #d7ecdd;
+}
+
+/* dock tab strip: lilac tint (the groups below are white) */
+html[data-theme="light"] .dk-tabs {
+  background: #f0edf9;
+}
+
+html[data-theme="light"] .dk-group {
+  background: var(--panel);
+}
+
+html[data-theme="light"] .dk-gutter:hover::after,
+html[data-theme="light"] .dk-gutter.active::after {
+  background: var(--acc);
+}
+
+/* mobile chrome: cream head, mint bottom bar */
+html[data-theme="light"] .m-head {
+  background: #fdf6ec;
+  border-bottom: 1px solid #f0e4cf;
+}
+
+html[data-theme="light"] .m-nav {
+  background: #ecf8f0;
+  border-top: 1px solid #d7ecdd;
+}
+
+html[data-theme="light"] .m-more-btn.active {
+  color: var(--acc);
+  background: var(--acc-soft);
+}
+
+/* dragging ghost and its shadow */
+html[data-theme="light"] .dk-ghost {
   background: #ffffff;
-  border-bottom: 1px solid #e3e8f0
+  box-shadow: 0 8px 30px rgba(90, 70, 160, .25);
 }
 
-.m-nav {
+/* ---------- 4 · common components: rounder, softer ---------- */
+html[data-theme="light"] .tl-btn {
+  border-radius: 10px;
+}
+
+html[data-theme="light"] .searchbox {
+  border-radius: 10px;
   background: #ffffff;
-  border-top: 1px solid #e3e8f0
 }
 
-/* dock: la barra delle tab e i gruppi su superfici chiare */
-.dk-tabs {
-  background: #eef1f7
+html[data-theme="light"] .searchbox:focus-within {
+  box-shadow: 0 0 0 2px rgba(91, 72, 232, .14);
 }
 
-.dk-ghost {
-  box-shadow: 0 8px 30px rgba(23, 32, 54, .18)
+html[data-theme="light"] .btn {
+  border-radius: 11px;
 }
 
-/* ---------- 4 · componenti comuni: raggi e superfici ---------- */
-.tl-btn {
-  border-radius: 9px
-}
-
-.act-btn {
-  border-radius: 10px
-}
-
-.searchbox {
-  border-radius: 9px
-}
-
-.btn {
-  border-radius: 10px
-}
-
-.btn.primary {
-  color: #ffffff
-}
-
-.btn.primary:hover {
-  background: #1d4ed8
-}
-
-.btn.tiny {
-  border-radius: 8px
-}
-
-.dk-tab {
-  border-radius: 9px 9px 0 0
-}
-
-.tree-ch-head,
-.tree-ex {
-  border-radius: 9px
-}
-
-.road-item {
-  border-radius: 8px
-}
-
-/* chip colorati: le tinte rgba scure diventano tinte chiare */
-.chip.purple {
-  background: rgba(124, 58, 237, .10)
-}
-
-.chip.cy {
-  background: rgba(14, 116, 144, .10)
-}
-
-.sb-chip.pkg {
-  background: rgba(14, 116, 144, .10)
-}
-
-/* ---------- 5 · exercise: statement, passi, hint ---------- */
-.step-cur {
-  box-shadow: 0 4px 18px rgba(23, 32, 54, .10)
-}
-
-.kw:hover {
-  background: rgba(37, 99, 235, .08)
-}
-
-.hint-card {
-  border-color: rgba(124, 58, 237, .30);
-  border-radius: 12px;
-  background: rgba(124, 58, 237, .06)
-}
-
-.hint-card .hint-cta {
-  border-color: rgba(124, 58, 237, .30);
-  border-radius: 9px
-}
-
-.hint-card .hint-cta:hover {
-  background: rgba(124, 58, 237, .12)
-}
-
-.kw.used {
-  border-bottom-color: rgba(124, 58, 237, .5)
-}
-
-.note {
-  border-radius: 0 10px 10px 0
-}
-
-/* ---------- 6 · editor e aree di input (chiarissime) ---------- */
-.code-area {
-  background: #ffffff;
-  border-radius: 13px
-}
-
-.cl .ln {
-  color: #98a2b3
-}
-
-.cl .cd {
-  color: #1f2733
-}
-
-.code-input {
-  color: #1f2733
-}
-
-.reflect-box textarea {
-  background: #ffffff;
-  border-radius: 12px
-}
-
-.field input {
-  background: #ffffff;
-  border-radius: 9px
-}
-
-.input-modal-field {
-  background: #ffffff;
-  border-radius: 9px
-}
-
-.codice-ta {
-  background: #ffffff;
-  color: #1f2733;
-  border-radius: 13px
-}
-
-.sandbox-ta {
-  background: #ffffff;
-  color: #1f2733;
-  border-radius: 13px
-}
-
-.sandbox-samples button {
-  border-radius: 13px
-}
-
-.codice-tabs button {
-  border-radius: 9px
-}
-
-/* blocchi di codice dentro passi completati e hint */
-.step-done pre {
-  background: #f6f8fb;
-  border-radius: 9px
-}
-
-.ex-final pre {
-  background: #f6f8fb;
-  border-radius: 10px
-}
-
-.hint-card code.syn {
-  background: #faf5ff;
+html[data-theme="light"] .btn.tiny {
   border-radius: 9px;
-  color: #6b21a8
 }
 
-/* sintassi Python su fondo chiaro */
-.py-k { color: #a626a4 }
-.py-s { color: #50a14f }
-.py-c { color: #697586 }
-.py-n { color: #986801 }
-.py-b { color: #0184bc }
-.py-f { color: #3568c9 }
-
-/* ---------- 7 · console / terminale: resta scuro (è un terminale) ---------- */
-.console-box {
-  background: #1c2230;
-  border-radius: 13px
+html[data-theme="light"] .dk-tab {
+  border-radius: 10px 10px 0 0;
 }
 
-.console-head {
-  background: #232b3b
+html[data-theme="light"] .tree-ch-head,
+html[data-theme="light"] .tree-ex {
+  border-radius: 10px;
 }
 
-.codice-out {
-  background: #1c2230;
-  border-radius: 13px
+html[data-theme="light"] .road-item {
+  border-radius: 9px;
 }
 
-.console-out .run-block {
-  border-bottom-color: rgba(255, 255, 255, .10)
-}
-
-.console-out .sim-out {
-  color: #a8b3c7
-}
-
-.console-out details.run-tb summary,
-.console-out details.run-tb summary::before {
-  color: #c99b6e
-}
-
-.console-out details.run-tb pre {
-  color: #d3999b
-}
-
-#sbOut {
-  background: #1c2230 !important
-}
-
-/* ---------- 8 · grafici ---------- */
-.graph-card {
-  background: #ffffff;
-  border-radius: 12px
-}
-
-.graph-card-head {
-  background: #f4f6fa
-}
-
-.graph-card-body {
-  border-radius: 0 0 12px 12px
-}
-
-.graph-close {
-  border-radius: 7px
-}
-
-.graph-close:hover {
-  border-color: #d1242f;
-  background: rgba(209, 36, 47, .08);
-  color: #d1242f
-}
-
-.plotly-err {
-  background: #ffffff
-}
-
-/* in full screen la scrim resta scura (vedi styles.css): ok in entrambi
-   i temi — le pillole glassy sono pensate per stare sopra la scrim */
-
-/* ---------- 9 · gioco: pad chiaro, stage e full screen restano scuri ---------- */
-.game-canvas {
-  border-radius: 10px
-}
-
-.game-pad {
-  background: linear-gradient(#ffffff, #eef1f7)
-}
-
-.gp {
-  border-radius: 18px;
-  background: linear-gradient(#ffffff, #e9edf4);
-  border-color: #c3cddb;
-  box-shadow: 0 3px 0 #b9c2d2;
-  color: #232a36
-}
-
-.gp-fire {
-  border-radius: 20px;
-  background: linear-gradient(#dbeafe, #bfd9f8);
-  border-color: #93b8ec;
-  color: #1e4fbb
-}
-
-.gp-q {
-  border-radius: 16px
-}
-
-/* ---------- 10 · drawer, overlay, modali, toast, menu mobile ---------- */
-.drawer {
-  box-shadow: 24px 0 70px rgba(23, 32, 54, .25);
-  border-radius: 0 22px 22px 0
-}
-
-.drawer-search input {
-  background: #ffffff;
-  border-radius: 10px
-}
-
-.drawer-x {
-  border-radius: 10px
-}
-
-.drawer-bg {
-  background: rgba(15, 23, 42, .42)
-}
-
-.ovl {
-  border-radius: 18px;
-  box-shadow: 0 30px 90px rgba(15, 23, 42, .30)
-}
-
-.ovl-bg {
-  background: rgba(15, 23, 42, .45)
-}
-
-.ovl-x {
-  border-radius: 10px
-}
-
-.modal {
-  border-radius: 18px;
-  box-shadow: 0 24px 70px rgba(15, 23, 42, .28)
-}
-
-.modal-bg {
-  background: rgba(15, 23, 42, .45)
-}
-
-.toast {
+html[data-theme="light"] .toast {
   border-radius: 12px;
-  box-shadow: 0 10px 34px rgba(15, 23, 42, .22)
+  box-shadow: 0 10px 34px rgba(90, 70, 160, .22);
 }
 
-.m-more-menu {
+html[data-theme="light"] .m-more-menu {
   border-radius: 14px;
-  box-shadow: 0 18px 50px rgba(15, 23, 42, .22)
+  box-shadow: 0 18px 50px rgba(90, 70, 160, .22);
 }
 
-.m-nav button {
-  border-radius: 12px
+/* colored chips: the dark rgba tints become pastel ones */
+html[data-theme="light"] .chip.purple {
+  background: rgba(139, 62, 232, .10);
 }
 
-/* mobile: i fogli (guide overlay, modali) arrotondano solo in alto */
+html[data-theme="light"] .chip.cy {
+  background: rgba(11, 127, 158, .10);
+}
+
+html[data-theme="light"] .sb-chip.pkg {
+  background: rgba(11, 127, 158, .10);
+}
+
+/* ---------- 5 · exercise: steps, hints, prose ---------- */
+html[data-theme="light"] .step-cur {
+  box-shadow: 0 4px 18px rgba(90, 70, 160, .12);
+}
+
+html[data-theme="light"] .kw:hover {
+  background: rgba(91, 72, 232, .08);
+}
+
+html[data-theme="light"] .hint-card {
+  border-color: rgba(139, 62, 232, .30);
+  border-radius: 13px;
+  background: rgba(139, 62, 232, .06);
+}
+
+html[data-theme="light"] .hint-card .hint-cta {
+  border-color: rgba(139, 62, 232, .30);
+  border-radius: 10px;
+}
+
+html[data-theme="light"] .hint-card .hint-cta:hover {
+  background: rgba(139, 62, 232, .12);
+}
+
+html[data-theme="light"] .kw.used {
+  border-bottom-color: rgba(139, 62, 232, .5);
+}
+
+html[data-theme="light"] .note {
+  border-radius: 0 11px 11px 0;
+}
+
+/* the reflect box is PROSE, not code: light like the rest of the UI */
+html[data-theme="light"] .reflect-box textarea {
+  background: #ffffff;
+  color: var(--text);
+  border-radius: 12px;
+}
+
+/* auth / settings inputs: white, dark text */
+html[data-theme="light"] .field input {
+  background: #ffffff;
+  color: var(--text);
+  border-radius: 9px;
+}
+
+/* ---------- 6 · TERMINALS AND CODE AREAS STAY BLACK ----------
+   The deliberate survivors: every surface where you WRITE code or
+   read a terminal keeps the dark background of styles.css, its light
+   text and the dark-tuned Python syntax colors. color-scheme:dark
+   keeps their inner scrollbars and carets dark too. */
+html[data-theme="light"] .codice-ta,
+html[data-theme="light"] .sandbox-ta,
+html[data-theme="light"] .code-area,
+html[data-theme="light"] .code-input,
+html[data-theme="light"] .console-box,
+html[data-theme="light"] .console-head,
+html[data-theme="light"] .step-done pre,
+html[data-theme="light"] .ex-final pre,
+html[data-theme="light"] .hint-card code.syn,
+html[data-theme="light"] .input-modal-field,
+html[data-theme="light"] #sbOut {
+  background: #14151a;
+  color: #e8eaf0;
+  border-color: #2c2e38;
+  color-scheme: dark;
+}
+
+html[data-theme="light"] .console-box,
+html[data-theme="light"] #sbOut {
+  background: #101216;
+}
+
+/* the console OUTPUT area is transparent inside its dark .console-box
+   (no background in styles.css either): it only needs the dark scheme
+   for its scrollbar — its colors come from the box around it */
+html[data-theme="light"] .console-out {
+  color-scheme: dark;
+}
+
+html[data-theme="light"] .console-head {
+  background: #15171b;
+}
+
+/* code tabs keep their var-based look — readable on the lilac panel */
+
+/* the drawer's filter box is a SEARCH, not code: white */
+html[data-theme="light"] .drawer-search input {
+  background: #ffffff;
+  color: var(--text);
+  border-radius: 10px;
+}
+
+/* ---------- 7 · charts: white cards (Matplotlib PNGs are white) ---------- */
+html[data-theme="light"] .graph-card {
+  background: #ffffff;
+  border-color: var(--border);
+}
+
+html[data-theme="light"] .graph-card-head {
+  background: #f4f1fb;
+  border-bottom-color: var(--border);
+}
+
+html[data-theme="light"] .graph-close:hover {
+  border-color: var(--err);
+  background: var(--err-soft);
+  color: var(--err);
+}
+
+html[data-theme="light"] .plotly-err {
+  background: #ffffff;
+}
+
+/* the fullscreen scrim and its glassy pills stay dark on purpose
+   (they float OVER a chart) — unchanged from styles.css */
+
+/* ---------- 8 · game: stage and scrims dark, pad light ---------- */
+html[data-theme="light"] .game-canvas {
+  border-radius: 11px;
+}
+
+html[data-theme="light"] .game-pad {
+  background: linear-gradient(#ffffff, #f1edfa);
+}
+
+html[data-theme="light"] .gp {
+  border-radius: 18px;
+  background: linear-gradient(#ffffff, #ece7f8);
+  border-color: #c8bfe4;
+  box-shadow: 0 3px 0 #cfc6e8;
+  color: #2e2a45;
+}
+
+html[data-theme="light"] .gp-fire {
+  border-radius: 20px;
+  background: linear-gradient(#e6e0fd, #d3c8fb);
+  border-color: #b3a4f0;
+  color: #4a35c9;
+}
+
+html[data-theme="light"] .gp-q {
+  border-radius: 16px;
+}
+
+/* ---------- 9 · drawer, overlays, modal, popover ---------- */
+html[data-theme="light"] .drawer {
+  background: var(--panel);
+  box-shadow: 24px 0 70px rgba(90, 70, 160, .28);
+  border-radius: 0 22px 22px 0;
+}
+
+html[data-theme="light"] .drawer-bg,
+html[data-theme="light"] .ovl-bg,
+html[data-theme="light"] .modal-bg {
+  background: rgba(58, 48, 92, .42);
+}
+
+html[data-theme="light"] .ovl,
+html[data-theme="light"] .ovl.stg {
+  background: var(--panel);
+  box-shadow: 0 30px 90px rgba(58, 48, 92, .35);
+  border-radius: 18px;
+}
+
+html[data-theme="light"] .ovl-x,
+html[data-theme="light"] .drawer-x {
+  border-radius: 10px;
+}
+
+html[data-theme="light"] .ovl-x:hover,
+html[data-theme="light"] .drawer-x:hover {
+  background: var(--panel2);
+}
+
+html[data-theme="light"] .modal {
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(58, 48, 92, .30);
+}
+
+/* the account popover (NEW v17) */
+html[data-theme="light"] .acct-pop {
+  background: var(--panel);
+  box-shadow: 0 26px 70px rgba(58, 48, 92, .30);
+}
+
+html[data-theme="light"] .acct-pop .apa {
+  background: var(--acc-soft);
+  border-color: var(--acc-line);
+  color: var(--acc);
+}
+
+html[data-theme="light"] .acct-pop .ap-prog {
+  background: var(--panel2);
+}
+
+html[data-theme="light"] .acct-pop .ap-prog .bar {
+  background: var(--panel3);
+}
+
+/* settings bits that need a pastel push beyond the vars */
+html[data-theme="light"] .theme-card {
+  background: #ffffff;
+}
+
+html[data-theme="light"] .switch i {
+  background: #b0a8d0;
+}
+
+/* mobile: the sheets round only at the top */
 @media (max-width:768px) {
-  .modal {
-    border-radius: 18px 18px 0 0
+  html[data-theme="light"] .modal {
+    border-radius: 18px 18px 0 0;
   }
 
-  .ovl {
-    border-radius: 18px 18px 0 0
-  }
-
-  .drawer {
-    border-radius: 0 22px 22px 0
+  html[data-theme="light"] .ovl {
+    border-radius: 18px 18px 0 0;
   }
 }
 
-/* ---------- 11 · dettagli ---------- */
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, .45) }
-  55% { box-shadow: 0 0 0 5px rgba(37, 99, 235, 0) }
+/* ---------- 10 · details ---------- */
+html[data-theme="light"] .tbl-ex td {
+  border-bottom-color: rgba(221, 214, 238, .9);
 }
 
-.tbl-ex td {
-  border-bottom-color: rgba(216, 223, 233, .9)
-}
-
-.console-out .run-block.sol {
+html[data-theme="light"] .console-out .run-block.sol {
   border-left-color: #8b5cf6;
-  background: rgba(139, 92, 246, .07)
+  background: rgba(139, 92, 246, .07);
 }
 
-/* ---------- 12 · alto contrasto (preferenza OS) in versione chiara ---------- */
+/* the brand mark keeps its blue stroke — it reads well on cream too */
+
+/* ---------- 11 · high contrast (OS preference), light edition ---------- */
 @media (prefers-contrast: more) {
-  :root {
-    --border: #b7c2d2;
-    --border2: #9fadc2;
-    --dim: #3c4759;
-    --faint: #4a566b;
-    --text: #171d27
+  html[data-theme="light"] {
+    --border: #b6abd8;
+    --border2: #9c8ec6;
+    --dim: #463f66;
+    --faint: #544c78;
+    --text: #201b36;
   }
 }

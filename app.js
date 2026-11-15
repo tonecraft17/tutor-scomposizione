@@ -1,7 +1,7 @@
 /* ============================================================
    APP · entry point: joins the modules and starts the app
    ============================================================ */
-/* ===== NEW v16.1 · every ES-module import now carries the same ?v=16.2
+/* ===== NEW v16.1 · every ES-module import now carries the same ?v=18
    query as the <script>/<link> tags in index.html. WHY: the service worker
    caches same-origin GETs by their FULL URL (query included), and the
    module files used to have NO version in their URL. On the first visit
@@ -13,26 +13,46 @@
    stale worker cache-misses and fetches the fresh, consistent set. The
    specifiers must stay character-for-character identical to the
    modulepreload hrefs in index.html, or each file would be fetched twice. ===== */
-import { APP, KEYS, supabaseConfigured, PLOTLY_JS } from './config.js?v=16.2';
-import { CH, EX, ORDER, TOTAL_EX, ROADMAP, codiceEsercizio } from './data/exercises.js?v=16.2';
-import { createDock, isMobile, icon } from './engine/dock.js?v=16.2';
+import { APP, KEYS, supabaseConfigured, PLOTLY_JS } from './config.js?v=18';
+import { CH, EX, ORDER, TOTAL_EX, ROADMAP, codiceEsercizio } from './data/exercises.js?v=18';
+import { createDock, isMobile, icon } from './engine/dock.js?v=18';
 import {
   stateFor, righeUtente, righeUtenteRaw, righeUtenteConCommenti, conRientro, checkStep, assistLabel, assistSummary,
   autonomiaOf, globalStats, nextExercise, verificaOutput
-} from './engine/tutor.js?v=16.2';
+} from './engine/tutor.js?v=18';
 import {
   runPythonCode, getStatus, onPythonStatus,
   onMatplotlibImage, onPlotlyFigure, onPygameFrame,
   onPythonRunEnd, sendPygameEvent, stopPygameGame
-} from './engine/python-runner.js?v=16.2'; // ===== MODIFIED =====
-import * as storage from './engine/storage.js?v=16.2';
-import * as solDb from './engine/solutions-db.js?v=16.2'; // ===== NEW · local solutions database =====
-import { PONTE } from './engine/ponte.js?v=16.2'; // ===== NEW v12.1 · bridge from exercise lines → project =====
+} from './engine/python-runner.js?v=18'; // ===== MODIFIED =====
+import * as storage from './engine/storage.js?v=18';
+import * as solDb from './engine/solutions-db.js?v=18'; // ===== NEW · local solutions database =====
+import { PONTE } from './engine/ponte.js?v=18'; // ===== NEW v12.1 · bridge from exercise lines → project =====
 
 /* ---------- UI utilities ---------- */
 const $ = s => document.querySelector(s);
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function elHtml(h) { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstElementChild; }
+/* ===== NEW v17 · AUTO-GROW for the code textareas =====
+   The writing zones (⌨ full Code, ✎ Lines, Sandbox) are now as TALL
+   as their content: the textarea grows with every line, and when the
+   program is longer than the panel the PANEL itself scrolls with its
+   own scrollbar (before, long programs lived in a small box with an
+   internal scroll). fit() retries while the textarea is still
+   DETACHED from the document (the progressive scheduler renders
+   panel bodies before mounting them: scrollHeight would be 0). */
+function armAutogrow(ta, minH) {
+  const min = minH || 240;
+  let tentativi = 0;
+  const fit = () => {
+    if (!ta.isConnected) { if (++tentativi < 60) setTimeout(fit, 60); return; }
+    ta.style.height = 'auto';
+    ta.style.height = Math.max(min, ta.scrollHeight + 3) + 'px';
+  };
+  ta.addEventListener('input', fit);
+  ta.addEventListener('focus', fit);
+  fit();
+}
 function toast(msg, type) {
   const t = elHtml(`<div class="toast ${type || ''}">${msg}</div>`);
   $('#toasts').appendChild(t);
@@ -101,9 +121,12 @@ function drawerEls() {
   if (!host.firstChild) {
     host.innerHTML =
       `<div class="drawer-bg" hidden></div>
-       <aside class="drawer" role="complementary" aria-label="Modules and exercises" hidden>
+       <aside class="drawer" role="complementary" aria-label="Modules drawer" hidden>
          <div class="drawer-head">
-           <span class="drawer-title">${icon('files')} Modules · Python Crash Course</span>
+           <!-- ===== CHANGED v18 · the drawer title is just "Modules" — the
+                same single name as the sidebar button that opens it (the
+                book reference stays in the chapter list below). ===== -->
+           <span class="drawer-title">${icon('files')} Modules</span>
            <button class="drawer-x" aria-label="Close the modules menu">✕</button>
          </div>
          <div class="drawer-search">
@@ -168,7 +191,9 @@ function overlayEls() {
       `<div class="ovl-bg" hidden></div>
        <div class="ovl" role="dialog" aria-modal="true" aria-labelledby="ovlTitle" hidden>
          <div class="ovl-head">
-           <span class="ovl-title" id="ovlTitle">${icon('help')} Guide · how the Tutor works</span>
+           <!-- ===== CHANGED v18 · overlay title = the sidebar button name
+                ("Guide"), one word like every other panel. ===== -->
+           <span class="ovl-title" id="ovlTitle">${icon('help')} Guide</span>
            <button class="ovl-x" aria-label="Close the guide">✕</button>
          </div>
          <div class="ovl-body"></div>
@@ -212,6 +237,359 @@ function toggleGuida(open) {
     if (ab) ab.classList.remove('active');
     setTimeout(() => { if (!OVL.open) { bg.hidden = true; ovl.hidden = true; } }, 240);
   }
+}
+
+/* ============================================================
+   ===== NEW v17 · THEME (dark / light) =====
+   ------------------------------------------------------------
+   Two real themes, two CSS files: styles.css (dark, the default,
+   untouched) and styles-light.css (playful light surfaces, EVERY
+   rule scoped under [data-theme="light"]). applyTheme() only
+   flips the attribute on <html>: the switch is instantaneous,
+   needs no reload and — thanks to the bootstrap <script> in
+   index.html <head> — never flashes the wrong theme on load.
+   In BOTH themes the terminals and every code-writing area stay
+   BLACK (a terminal is dark in any theme).
+   ============================================================ */
+function currentTheme() { return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'; }
+function applyTheme(name, opts = {}) {
+  const t = name === 'light' ? 'light' : 'dark';
+  if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  else document.documentElement.removeAttribute('data-theme');
+  try { localStorage.setItem(KEYS.theme, JSON.stringify(t)); } catch (e) { }
+  /* the browser chrome (address bar on phones) follows the theme */
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', t === 'light' ? '#f7f1e8' : '#17181c');
+  /* if the Settings overlay is open, refresh its Appearance cards */
+  const shost = document.getElementById('settingsHost');
+  if (shost && shost.classList.contains('open')) {
+    const b = shost.querySelector('.ovl-body');
+    if (b) { renderImpostazioni(b); const x = shost.querySelector('.ovl-x'); if (x) x.focus(); }
+  }
+  if (!opts.silent) toast(t === 'light'
+    ? '☀ Light theme on — terminals and code areas stay black.'
+    : '🌙 Dark theme on.', 'ok');
+}
+
+/* ============================================================
+   ===== NEW v17 · ACCOUNT POPOVER (top-right button) =====
+   ------------------------------------------------------------
+   The titlebar button shows the avatar initial and the synthetic
+   progress (done/total); a click opens a small popover with the
+   account info, the progress bar and the autonomy, plus the
+   "⚙ edit" entry that opens the Settings overlay. It closes on
+   outside click, on Esc and whenever the auto-hide header goes
+   away (body.head-off), so it can never float orphaned.
+   ============================================================ */
+const ACCT = { open: false };
+function renderAccountChrome() {
+  const b = document.getElementById('btnAccount');
+  if (!b) return;
+  const utente = storage.currentUser();
+  const g = globalStats(S.progress);
+  const ini = utente && utente.email ? utente.email.trim()[0].toUpperCase() : '?';
+  b.innerHTML = `<span class="apa" aria-hidden="true">${esc(ini)}</span><span class="apn">${g.done}<i>/${g.total}</i></span>`;
+  b.title = (utente ? utente.email + ' · ' : 'Not signed in · ') +
+    `${g.done} of ${g.total} exercises completed — click for details`;
+}
+function renderAccountPop(pop) {
+  const utente = storage.currentUser();
+  const configured = supabaseConfigured();
+  const sync = storage.syncStatus();
+  const g = globalStats(S.progress);
+  const auto = Math.max(0, Math.round((1 - g.avgAssist / 3) * 100));
+  /* ===== CHANGED v18 · the site is ONLINE: the labels follow. "local
+     mode"/"local only" read like an offline-only app — now the chip says
+     what the user can DO (sign in to sync) or what is missing (cloud off). ===== */
+  const syncLabel = !configured ? 'cloud not configured'
+    : !utente ? 'not signed in — sign in to sync your progress across devices'
+      : sync === 'synced' ? '☁ progress synced'
+        : sync === 'syncing' ? '☁ syncing…'
+          : sync === 'error' ? '⚠ last sync failed'
+            : storage.isSyncEnabled() ? '☁ signed in' : '🔒 sync paused (privacy)';
+  pop.innerHTML = `
+    <div class="ap-head">
+      <span class="apa big" aria-hidden="true">${utente && utente.email ? esc(utente.email.trim()[0].toUpperCase()) : '?'}</span>
+      <div class="ap-who">
+        <b>${utente && utente.email ? esc(utente.email) : 'Local student'}</b>
+        <span>${syncLabel}</span>
+      </div>
+    </div>
+    <div class="ap-prog">
+      <div class="ap-row"><span>exercises completed</span><b>${g.done}<i>/${g.total}</i></b></div>
+      <div class="bar" aria-hidden="true"><i style="width:${Math.round(g.done / Math.max(1, g.total) * 100)}%"></i></div>
+      <div class="ap-row"><span>steps passed</span><b>${g.solved}</b></div>
+      <div class="ap-row"><span>average autonomy</span><b>${auto}%</b></div>
+      <div class="ap-row"><span>full hints used</span><b>${g.l3}</b></div>
+    </div>
+    <div class="ap-acts">
+      <button class="btn primary tiny" data-ap="settings">⚙ edit — settings</button>
+      <button class="btn tiny" data-ap="panel">open the full Account panel</button>
+      ${utente
+      ? `<button class="btn tiny danger" data-ap="logout">sign out</button>`
+      : configured ? `<button class="btn tiny" data-ap="signin">sign in / create account</button>` : ''}
+    </div>`;
+  pop.querySelectorAll('[data-ap]').forEach(btn => btn.addEventListener('click', () => {
+    const act = btn.dataset.ap;
+    closeAccountPop();
+    if (act === 'settings') toggleImpostazioni(true);
+    else if (act === 'panel') { if (isMobile()) { dock.setMobileTab('account'); dock.renderMobilePanel(); dock.renderMobileNav(); } else dock.activateOrInsert('account'); }
+    else if (act === 'logout') storage.esci().then(() => { toast('Signed out.', ''); renderAccountChrome(); renderStatus(); dock.refreshPanels(['account', 'progressi']); });
+    else if (act === 'signin') { if (isMobile()) { dock.setMobileTab('account'); dock.renderMobilePanel(); dock.renderMobileNav(); } else dock.activateOrInsert('account'); }
+  }));
+}
+function closeAccountPop() {
+  const pop = document.querySelector('.acct-pop');
+  if (!pop) return;
+  pop.remove();
+  ACCT.open = false;
+  const b = document.getElementById('btnAccount');
+  if (b) b.setAttribute('aria-expanded', 'false');
+}
+function toggleAccountPop() {
+  if (ACCT.open) { closeAccountPop(); return; }
+  const b = document.getElementById('btnAccount');
+  if (!b) return;
+  const pop = elHtml(`<div class="acct-pop" role="dialog" aria-label="Account and progress"></div>`);
+  document.body.appendChild(pop);
+  renderAccountPop(pop);
+  decorateA11y(pop);
+  ACCT.open = true;
+  b.setAttribute('aria-expanded', 'true');
+}
+
+/* ============================================================
+   ===== NEW v17 · SETTINGS OVERLAY (sidebar ⚙ button) =====
+   ------------------------------------------------------------
+   Three sections, one overlay (same open/close/focus-trap
+   pattern as the Guide): Appearance (dark ⇄ light), Access
+   credentials (password / email / recovery, via Supabase) and
+   Privacy (what is stored where, cloud-mirror switch, export
+   and delete). On mobile it opens from the ⚙ button of the
+   header. The host stays empty until the first open (the LCP
+   path is untouched, like drawer and guide).
+   ============================================================ */
+const STG = { open: false, invoker: null };
+function settingsEls() {
+  let host = document.getElementById('settingsHost');
+  if (!host) { host = document.createElement('div'); host.id = 'settingsHost'; document.body.appendChild(host); }
+  if (!host.firstChild) {
+    host.innerHTML =
+      `<div class="ovl-bg" hidden></div>
+       <div class="ovl stg" role="dialog" aria-modal="true" aria-labelledby="stgTitle" hidden>
+         <div class="ovl-head">
+           <!-- ===== CHANGED v18 · same gear icon as the sidebar button +
+                the single name "Settings". ===== -->
+           <span class="ovl-title" id="stgTitle">${icon('gear')} Settings</span>
+           <button class="ovl-x" aria-label="Close the settings">✕</button>
+         </div>
+         <div class="ovl-body"></div>
+       </div>`;
+    host.querySelector('.ovl-x').addEventListener('click', () => toggleImpostazioni(false));
+    host.querySelector('.ovl-bg').addEventListener('click', () => toggleImpostazioni(false));
+  }
+  return { host, ovl: host.querySelector('.ovl'), bg: host.querySelector('.ovl-bg'), body: host.querySelector('.ovl-body') };
+}
+function stgKey(ev) {
+  if (ev.key === 'Escape') { ev.stopPropagation(); toggleImpostazioni(false); return; }
+  if (ev.key === 'Tab') {
+    const { ovl } = settingsEls();
+    const f = [...ovl.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el => !el.disabled && el.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
+    else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+  }
+}
+function toggleImpostazioni(open) {
+  const { host, ovl, bg, body } = settingsEls();
+  const want = open === undefined ? !STG.open : !!open;
+  if (want === STG.open) return;
+  STG.open = want;
+  const ab = document.querySelector('.act-btn[data-panel="impostazioni"]');
+  if (want) {
+    STG.invoker = document.activeElement;
+    bg.hidden = false; ovl.hidden = false;
+    renderImpostazioni(body);
+    decorateA11y(body);
+    requestAnimationFrame(() => host.classList.add('open'));
+    document.addEventListener('keydown', stgKey, true);
+    if (ab) ab.classList.add('active');
+    const x = ovl.querySelector('.ovl-x'); if (x) x.focus();
+  } else {
+    host.classList.remove('open');
+    document.removeEventListener('keydown', stgKey, true);
+    if (STG.invoker && STG.invoker.isConnected) { try { STG.invoker.focus(); } catch (e) { } }
+    if (ab) ab.classList.remove('active');
+    setTimeout(() => { if (!STG.open) { bg.hidden = true; ovl.hidden = true; } }, 240);
+  }
+}
+function renderImpostazioni(box) {
+  box.innerHTML = '';
+  const tema = currentTheme();
+  const configured = supabaseConfigured();
+  const utente = storage.currentUser();
+  const syncOn = storage.isSyncEnabled();
+  const wrap = elHtml(`<div class="stg-wrap">
+    <h2 class="pan-title">Settings</h2>
+    <p class="pan-sub" style="margin-bottom:10px">Appearance, access credentials and privacy — everything else lives where it always did.</p>
+
+    <!-- 1 · APPEARANCE -->
+    <section class="stg-sec">
+      <h3>🎨 Appearance</h3>
+      <div class="theme-cards" role="radiogroup" aria-label="Interface theme">
+        <button class="theme-card${tema === 'dark' ? ' on' : ''}" data-tcard="dark" role="radio" aria-checked="${tema === 'dark'}">
+          <span class="tc-prev tc-dark"><i class="a"></i><i class="b"></i><i class="c"></i></span>
+          <b>Dark</b><span class="tc-sub">the current one</span>
+        </button>
+        <button class="theme-card${tema === 'light' ? ' on' : ''}" data-tcard="light" role="radio" aria-checked="${tema === 'light'}">
+          <span class="tc-prev tc-light"><i class="a"></i><i class="b"></i><i class="c"></i></span>
+          <b>Light</b><span class="tc-sub">playful pastels</span>
+        </button>
+      </div>
+      <p class="stg-note">In <b>both</b> themes the terminals and every code-writing area stay <b>black</b>.</p>
+    </section>
+
+    <!-- 2 · ACCESS CREDENTIALS -->
+    <section class="stg-sec">
+      <h3>🔑 Access credentials</h3>
+      ${!configured ? `
+        <!-- ===== CHANGED v18 · the site is ONLINE: this block is now a
+             compact setup guide for the owner — the three steps, the exact
+             place to paste them (config.js) and the health check that
+             verifies the pair on load. ===== -->
+        <p class="stg-note">⚠ Cloud accounts are <b>not configured</b> yet: there are no credentials to manage here and the progress stays in this browser. To activate the accounts on the deployed site:</p>
+        <ol class="stg-steps">
+          <li>create a project on <b>supabase.com</b> (free) and run <code>supabase/schema.sql</code> in its SQL editor;</li>
+          <li>copy <b>Project URL</b> and the <b>anon public</b> key from Project Settings → API;</li>
+          <li>paste them into <code>config.js → SUPABASE.url / anonKey</code> and redeploy.</li>
+        </ol>
+        <p class="stg-note">On the next load the app pings <code>/auth/v1/health</code>: a wrong URL or key shows <b>sync ✗</b> in the status bar right away. In Supabase → Authentication → URL Configuration set the <b>Site URL</b> to this site's address, so the confirmation emails land correctly.</p>` : !utente ? `
+        <p class="stg-note">You are <b>not signed in</b>. Create an account or sign in from the Account panel (top-right button → “open the full Account panel”) to sync your progress across devices.</p>
+        <div class="auth-card">
+          <h3>Forgot your password?</h3>
+          <div class="field"><label for="stgResetMail">Email of the account</label><input id="stgResetMail" type="email" placeholder="student@school.edu"></div>
+          <div class="step-actions" style="margin-top:8px"><button class="btn" id="stgResetGo">✉ send recovery email</button></div>
+          <div class="auth-msg" id="stgResetMsg"></div>
+        </div>` : `
+        <div class="user-chip">${icon('user')}<div><b>${esc(utente.email)}</b></div></div>
+        <div class="auth-card">
+          <h3>Change password</h3>
+          <div class="auth-grid">
+            <div class="field"><label for="stgPw1">New password (min 6 characters)</label><input id="stgPw1" type="password" placeholder="••••••••"></div>
+            <div class="field"><label for="stgPw2">Repeat it</label><input id="stgPw2" type="password" placeholder="••••••••"></div>
+          </div>
+          <div class="step-actions" style="margin-top:8px"><button class="btn primary" id="stgPwGo">update password</button></div>
+          <div class="auth-msg" id="stgPwMsg"></div>
+        </div>
+        <div class="auth-card">
+          <h3>Change email</h3>
+          <div class="field"><label for="stgMail">New email address</label><input id="stgMail" type="email" placeholder="student@school.edu"></div>
+          <div class="step-actions" style="margin-top:8px"><button class="btn" id="stgMailGo">update email</button></div>
+          <div class="auth-msg" id="stgMailMsg"></div>
+          <p class="stg-note">Two-step: a <b>confirmation link</b> arrives at the new address — until you open it, the old email stays active.</p>
+        </div>`}
+    </section>
+
+    <!-- 3 · PRIVACY -->
+    <section class="stg-sec">
+      <h3>🔒 Privacy and data</h3>
+      <ul class="priv-list">
+        <li><b>Progress and drafts</b> — <code>localStorage</code> of this browser (only you can read it; it never leaves the device unless you sign in).</li>
+        <li><b>Solution files of the book</b> — <code>IndexedDB</code> of this browser (public book material, no personal data).</li>
+        <li><b>Cloud mirror</b> — only if you <b>sign in</b>: your progress row on the school's Supabase, tied to the account email. Nothing else is ever sent.</li>
+        <li><b>Python runtime, charts, games</b> — downloaded from public CDNs (jsDelivr/Plotly) the first time you use them; they carry no personal data.</li>
+      </ul>
+      <div class="priv-row">
+        <div>
+          <b>Cloud sync</b>
+          <span>${!configured ? 'needs a configured account' : !utente ? 'active only while signed in' : syncOn ? 'on — progress mirrors to your account' : 'off — nothing leaves this browser'}</span>
+        </div>
+        <button class="switch${syncOn ? ' on' : ''}" id="stgSyncSw" role="switch" aria-checked="${syncOn}"
+          ${(!configured || !utente) ? 'disabled title="Available after signing in with the cloud configured"' : ''} aria-label="Cloud sync"><i></i></button>
+      </div>
+      <div class="step-actions" style="margin-top:12px">
+        <button class="btn" id="stgExport">⬇ export my data (JSON)</button>
+        <button class="btn danger" id="stgWipeLocal">🗑 delete local data</button>
+        ${utente ? `<button class="btn danger" id="stgWipeCloud">☁ delete cloud data</button>` : ''}
+      </div>
+    </section>
+  </div>`);
+
+  /* --- 1 · theme cards --- */
+  wrap.querySelectorAll('[data-tcard]').forEach(c => c.addEventListener('click', () => {
+    if (c.dataset.tcard === tema) return;
+    applyTheme(c.dataset.tcard);
+  }));
+
+  /* --- 2 · credentials --- */
+  const pwGo = wrap.querySelector('#stgPwGo');
+  if (pwGo) pwGo.addEventListener('click', async () => {
+    const msg = wrap.querySelector('#stgPwMsg');
+    const p1 = wrap.querySelector('#stgPw1').value, p2 = wrap.querySelector('#stgPw2').value;
+    if (p1.length < 6) { msg.className = 'auth-msg err'; msg.textContent = 'The password needs at least 6 characters.'; return; }
+    if (p1 !== p2) { msg.className = 'auth-msg err'; msg.textContent = 'The two passwords do not match.'; return; }
+    msg.className = 'auth-msg'; msg.textContent = 'Updating…';
+    try { await storage.cambiaPassword(p1); msg.className = 'auth-msg ok'; msg.textContent = 'Password updated ✓'; wrap.querySelector('#stgPw1').value = ''; wrap.querySelector('#stgPw2').value = ''; }
+    catch (er) { msg.className = 'auth-msg err'; msg.textContent = String(er.message || 'Update failed.'); }
+  });
+  const mailGo = wrap.querySelector('#stgMailGo');
+  if (mailGo) mailGo.addEventListener('click', async () => {
+    const msg = wrap.querySelector('#stgMailMsg');
+    const em = wrap.querySelector('#stgMail').value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { msg.className = 'auth-msg err'; msg.textContent = 'Enter a valid email address.'; return; }
+    msg.className = 'auth-msg'; msg.textContent = 'Sending…';
+    try { await storage.cambiaEmail(em); msg.className = 'auth-msg ok'; msg.textContent = 'Confirmation link sent to ' + em + ' ✓'; }
+    catch (er) { msg.className = 'auth-msg err'; msg.textContent = String(er.message || 'Update failed.'); }
+  });
+  const resetGo = wrap.querySelector('#stgResetGo');
+  if (resetGo) resetGo.addEventListener('click', async () => {
+    const msg = wrap.querySelector('#stgResetMsg');
+    const em = wrap.querySelector('#stgResetMail').value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { msg.className = 'auth-msg err'; msg.textContent = 'Enter a valid email address.'; return; }
+    msg.className = 'auth-msg'; msg.textContent = 'Sending…';
+    try { await storage.inviaResetEmail(em); msg.className = 'auth-msg ok'; msg.textContent = 'Recovery email sent to ' + em + ' ✓'; }
+    catch (er) { msg.className = 'auth-msg err'; msg.textContent = String(er.message || 'Send failed.'); }
+  });
+
+  /* --- 3 · privacy --- */
+  const sw = wrap.querySelector('#stgSyncSw');
+  if (sw && !sw.disabled) sw.addEventListener('click', () => {
+    const novo = !storage.isSyncEnabled();
+    storage.setSyncEnabled(novo);
+    sw.classList.toggle('on', novo);
+    sw.setAttribute('aria-checked', String(novo));
+    sw.parentElement.querySelector('span').textContent = novo ? 'on — progress mirrors to your account' : 'off — nothing leaves this browser';
+    renderStatus(); renderAccountChrome();
+    toast(novo ? '☁ Cloud sync on.' : '🔒 Cloud sync off: everything stays in this browser.', novo ? 'ok' : '');
+  });
+  wrap.querySelector('#stgExport').addEventListener('click', () => {
+    const st = storage.loadLocal();
+    const payload = { app: APP.name, exportedAt: new Date().toISOString(), current: st.current, progress: st.progress };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'tutor-progress-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('⬇ Progress exported as JSON (keep it: it is your only offline backup).', 'ok');
+  });
+  wrap.querySelector('#stgWipeLocal').addEventListener('click', async () => {
+    const ok = await modal('<h3>🗑 Delete the local data?</h3><p>Progress, drafts and the panel layout of <b>this browser</b> will be erased (the chosen theme and the solutions database stay). The cloud copy, if any, is NOT touched.</p>', 'Delete');
+    if (!ok) return;
+    storage.resetLocal();
+    toast('Local data deleted — reloading…', '');
+    setTimeout(() => location.reload(), 700);
+  });
+  const wipeCloud = wrap.querySelector('#stgWipeCloud');
+  if (wipeCloud) wipeCloud.addEventListener('click', async () => {
+    const ok = await modal('<h3>☁ Delete the cloud data?</h3><p>The progress row of your account on the server will be erased. The data in this browser is NOT touched.</p>', 'Delete');
+    if (!ok) return;
+    try { await storage.azzeraRemoto(); toast('Cloud data deleted.', 'ok'); }
+    catch (er) { toast('⚠ Could not delete the cloud data.', 'warn'); }
+  });
+
+  box.appendChild(wrap);
 }
 
 /* ============================================================
@@ -1153,7 +1531,7 @@ async function eseguiEsercizio(e) {
   }
   saveProgress();
   dock.refreshPanels(['console', 'esercizio', 'progressi']);
-  updateCodiceOut();          // ===== NEW v10 · Code editor terminal =====
+  updateCodiceOut();          // v18 · refreshes the "output in the Console" note of the editors
   renderStatus();
 }
 
@@ -1208,7 +1586,7 @@ async function eseguiProgetto(e, st, mod) {
       toast((mod ? '⌨ modified version — ' : '') + '📊 The program drew a chart: open the <b>Charts</b> panel to see it.', 'ok');
       if (isMobile()) { dock.setMobileTab('grafici'); dock.renderMobilePanel(); dock.renderMobileNav(); }
     } else {
-      toast((mod ? '⌨ modified version — ' : '') + 'full program run (' + nFile + ' files): output in the Console and in the ⌨ editor.', 'ok');
+      toast((mod ? '⌨ modified version — ' : '') + 'full program run (' + nFile + ' files): output in the <b>Console</b> tab.', 'ok');
       if (isMobile()) { dock.setMobileTab('console'); dock.renderMobilePanel(); dock.renderMobileNav(); }
     }
   } else {
@@ -1303,9 +1681,15 @@ function stepCard(e, idx) {
     const ta = document.createElement('textarea');
     ta.className = 'code-input'; ta.spellcheck = false; ta.autocapitalize = 'off'; ta.autocomplete = 'off';
     ta.setAttribute('aria-label', `Python code editor, step ${idx + 1} of ${e.steps.length} of exercise ${e.id}`);
-    ta.rows = Math.max(2, nExp);
+    /* ===== CHANGED v18 · BIGGER writing zone: the step textarea starts at
+       4 rows minimum (was 2, sized on the expected lines only) and grows
+       with what the student types (armAutogrow, 132px minimum — see
+       .code-input in styles.css). More room to think, less scrolling in
+       the small box. ===== */
+    ta.rows = Math.max(4, nExp + 2);
     ta.placeholder = nExp > 1 ? `write the ${nExp} Python lines for this step here…` : 'write the Python line for this step here…';
     ta.value = S.drafts[e.id + '::' + idx] || '';
+    armAutogrow(ta, 132);
     ta.addEventListener('input', () => { S.drafts[e.id + '::' + idx] = ta.value; });
     ta.addEventListener('keydown', ev => {
       if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); doVerify(e, idx, ta); }
@@ -1322,7 +1706,11 @@ function stepCard(e, idx) {
     card.appendChild(acts);
     card.appendChild(elHtml(`<div class="step-msg" id="stepMsg"></div>`));
   } else if (s.ta) {
-    card.appendChild(elHtml(`<div class="reflect-box"><textarea id="refTa" aria-label="Written answer, step ${idx + 1} of ${e.steps.length}: ${esc(s.ta)}" placeholder="${esc(s.ta)}">${esc(exState(e.id).notes[idx] || '')}</textarea></div>`));
+    /* ===== CHANGED v18 · same bigger-zone treatment for the written-answer
+       step: the reflection textarea grows with the answer (96px minimum). ===== */
+    const refl = elHtml(`<div class="reflect-box"><textarea id="refTa" aria-label="Written answer, step ${idx + 1} of ${e.steps.length}: ${esc(s.ta)}" placeholder="${esc(s.ta)}">${esc(exState(e.id).notes[idx] || '')}</textarea></div>`);
+    card.appendChild(refl);
+    armAutogrow(refl.querySelector('#refTa'), 96);
     const acts = elHtml(`<div class="step-actions"><button class="btn primary">✓ Confirm answer</button></div>`);
     acts.querySelector('button').addEventListener('click', () => confirmText(e, idx));
     card.appendChild(acts);
@@ -1351,7 +1739,7 @@ function runRow(e, primary) {
   const armato = codiceArmato(e, st);   // ===== NEW v10 · modified version in the editor? =====
   const row = elHtml(`<div class="ex-actions">
     <button class="btn ${primary ? 'primary' : ''}" data-run="1">${icon('term')} ${primary ? '▶ Run and check the output' : '▶ Run program'}</button>
-    ${e.noRun ? '' : `<button class="btn tiny" id="btnCodiceOpen" data-code="1" title="Open the full code this button runs: you can modify it and run it again (editor + terminal)">⌨ code</button>`}
+    ${e.noRun ? '' : `<button class="btn tiny" id="btnCodiceOpen" data-code="1" title="Open the full code this button runs: you can modify it and run it again — the output lands in the Console tab">⌨ code</button>`}
     ${e.noRun ? '' : `<button class="btn tiny" id="btnRigheOpen" data-righe="1" title="Edit ONLY the lines of your exercise (the ones of \"Exercise completed\"), without opening all the code: the values you change flow to the project via the ⚙ bridge — and you see which module they live in">✎ lines</button>`}
     <span class="rt-note" id="runNote">${armato ? '⚠ will run the <b>modified version</b> in the ✎ Lines or ⌨ Code editor' : 'real Python runtime (Pyodide) · support files and solution output from the local database'}</span>
   </div>`);
@@ -1510,7 +1898,7 @@ function renderEsercizio(box) {
 }
 
 /* ============================================================
-   ===== NEW v10 · CODE PANEL (editor + terminal) =====
+   ===== NEW v10 · CODE PANEL (full-program editor) =====
    ------------------------------------------------------------
    Shows the FULL program that "▶ Run and check the output"
    sends to the runtime (code of the passed steps, with any
@@ -1522,9 +1910,11 @@ function renderEsercizio(box) {
      Exercise panel — runs the student's version: the same
      result can be obtained in a way different from the
      predetermined solution;
-   · the area below the editor works as a terminal: prompt,
-     output, traceback, blinking cursor (history shared with
-     the Console, which remains the complete log);
+   · ===== CHANGED v18 · EDITOR ONLY: the terminal that used to
+     live below the textarea is gone. The output of ▶ Run goes
+     to the Console tab (the app's single console); a compact
+     note with an "open Console" button sits where the terminal
+     was, updated after every run by updateCodiceOut(); =====
    · "⟲ restore original" discards the edits and goes back to
      the program assembled from the passed steps.
    The override is armed ONLY if the typed content differs from
@@ -2044,9 +2434,10 @@ function renderRighe(box) {
         const ta = document.createElement('textarea');
         ta.className = 'codice-ta rg-ta'; ta.spellcheck = false; ta.autocapitalize = 'off'; ta.autocomplete = 'off';
         ta.setAttribute('aria-label', `Editor of your exercise lines${slice.passi.length > 1 ? ' — step ' + (k + 1) + ' of ' + slice.passi.length : ''}`);
-        ta.rows = Math.min(22, Math.max(3, n + 1));
+        ta.rows = Math.max(3, n + 1);
         ta.value = val;
         ta.placeholder = 'your exercise lines…';
+        armAutogrow(ta, 64);   // ===== NEW v17 · the block grows with its lines =====
         const blocco = mkBloco(head, ta, null, { passo: p.passo });
         if (k > 0) blocco.classList.add('extra');
         blocchi.appendChild(blocco);
@@ -2115,9 +2506,10 @@ function renderRighe(box) {
         const ta = document.createElement('textarea');
         ta.className = 'codice-ta rg-ta'; ta.spellcheck = false; ta.autocapitalize = 'off'; ta.autocomplete = 'off';
         ta.setAttribute('aria-label', `Editor of the project file ${fn}${main ? ' — file executed by run' : ''}`);
-        ta.rows = Math.min(22, Math.max(3, (cur || orig).split('\n').length + 1));
+        ta.rows = Math.max(3, (cur || orig).split('\n').length + 1);
         ta.value = cur;
         ta.placeholder = `content of ${fn}…`;
+        armAutogrow(ta, 64);   // ===== NEW v17 =====
         head.querySelector('[data-open]').addEventListener('click', () => apriModulo(fn));
         blocchi.appendChild(mkBloco(head, ta, fn, { orig }));
       }
@@ -2141,23 +2533,29 @@ function renderRighe(box) {
       const ta = document.createElement('textarea');
       ta.className = 'codice-ta rg-ta'; ta.spellcheck = false; ta.autocapitalize = 'off'; ta.autocomplete = 'off';
       ta.setAttribute('aria-label', `Editor of the exercise lines in ${slice.main}`);
-      ta.rows = Math.max(5, Math.min(22, (val || righe).split('\n').length + 2));
+      ta.rows = Math.max(5, (val || righe).split('\n').length + 2);
       ta.value = val;
       ta.placeholder = 'Pass the first step in the Exercise panel, or write the lines of your program here directly…';
+      armAutogrow(ta, 96);   // ===== NEW v17 =====
       head.querySelector('[data-open]').addEventListener('click', () => apriModulo(slice.main));
       const blocco = mkBloco(head, ta, null, { orig: righe, divergente, base });
       if (divergente) blocco.classList.add('extra');
       blocchi.appendChild(blocco);
     }
-    /* --- actions + terminal --- */
+    /* --- actions + output note (v18: editor only, no embedded terminal) --- */
     const acts = elHtml(`<div class="ex-actions" style="margin-top:0">
       <button class="btn primary" id="rgRun">▶ run</button>
       <button class="btn" id="rgReset" title="Discard the edits: go back to the exercise's original lines (they apply to the ⌨ Code editor too)">⟲ restore original</button>
       <span class="rt-note" id="rgStatus">Ctrl+Enter to run · edits are saved with your progress</span>
     </div>`);
+    const outNote = elHtml(`<div class="ed-out-note">
+      <span data-outnote>▶ Run prints in the <b>Console</b> tab</span>
+      <button class="btn-cl" data-openconsole title="Open the Console tab: output and run history live there">⌨ open Console</button>
+    </div>`);
     wrap.appendChild(acts);
-    const out = elHtml(`<div class="console-out codice-out" id="codiceOut"></div>`);
-    wrap.appendChild(out);
+    wrap.appendChild(outNote);
+    const openConsoleBtn = wrap.querySelector('[data-openconsole]');
+    if (openConsoleBtn) openConsoleBtn.addEventListener('click', () => apriConsole());
     /* --- input → arms/disarms the overrides (the same ones as ⌨ Code) --- */
     const aggiornaStato = (avviso) => {
       document.querySelectorAll('#rgStatus').forEach(el => {
@@ -2242,8 +2640,7 @@ function renderRighe(box) {
       toast('⟲ Original lines restored.', 'ok');
       dock.refreshPanels(['righe', 'codice', 'esercizio']);
     });
-    requestAnimationFrame(() => { aggiornaBadgeCodice(e); out.scrollTop = out.scrollHeight; });
-    renderCodiceOut(out, e);
+    requestAnimationFrame(() => { aggiornaBadgeCodice(e); updateCodiceOut(); });
   })();
 }
 /** Live-updates the "modified version" markers: the editor badge,
@@ -2332,30 +2729,38 @@ function runBlockEl(r, e) {
   }
   return b;
 }
-/** History of the editor's terminal (same source as the Console:
- *  st.runs) + final prompt with blinking cursor. */
-function renderCodiceOut(outEl, e) {
-  const st = exState(e.id);
-  outEl.innerHTML = '';
-  if (st.runs.length) {
-    st.runs.forEach(r => outEl.appendChild(runBlockEl(r, e)));
-    if (st.verificato) outEl.appendChild(elHtml(`<span class="run-ok">✓ Output verified: it matches the one expected by the book.</span>`));
-  } else if (st.outputs.length) {
-    outEl.appendChild(elHtml(`<span class="sim-tag">expected output (simulated) · press "run" for the real one</span>`));
-    st.outputs.forEach(l => outEl.appendChild(elHtml(`<div class="sim-out">${esc(l)}</div>`)));
-  } else {
-    outEl.appendChild(elHtml(`<span class="console-empty">Exercise terminal: press "▶ run" and the output will appear below (full history also in the Console panel).</span>`));
-  }
-  outEl.appendChild(elHtml(`<span class="line-cmd">student@tutor:~$&nbsp;<span class="cursor"></span></span>`));
-}
-/** Updates only the output area of the Code editor (if open): the
- *  textarea is not touched, so typing loses neither focus nor position.
- *  FIX v10 · updates ALL instances (desktop dock + mobile view). */
+/** ===== CHANGED v18 · the Code and Lines panels are EDITOR-ONLY: the
+ *  terminal below the textarea is gone (ONE console in the whole app —
+ *  the Console tab). updateCodiceOut() now refreshes the compact note
+ *  that replaced it (.ed-out-note > [data-outnote]): it always tells
+ *  where the output of ▶ Run lands and how many runs are in the history,
+ *  so a student who pressed Run from an editor tab is never left
+ *  wondering where the result went.
+ *  FIX v10 kept · updates ALL instances (desktop dock + mobile view). ===== */
 function updateCodiceOut() {
-  const els = document.querySelectorAll('#codiceOut');
+  const els = document.querySelectorAll('[data-outnote]');
   if (!els.length) return;
   const e = EX[S.current] || EX[ORDER[0]];
-  els.forEach(el => { renderCodiceOut(el, e); el.scrollTop = el.scrollHeight; });
+  const st = exState(e.id);
+  const n = st.runs.length;
+  const html = !n
+    ? '▶ Run prints in the <b>Console</b> tab'
+    : (() => {
+      const last = st.runs[n - 1];
+      const esito = last.err ? 'last run: ⚠ error'
+        : last.game ? 'last run: 🎮 game'
+          : last.chart ? 'last run: 📊 chart'
+            : 'last run: ✓ ok';
+      return `${esito} · output in the <b>Console</b> tab · ${n} run${n === 1 ? '' : 's'} in the history`;
+    })();
+  els.forEach(el => { el.innerHTML = html; });
+}
+/** ===== NEW v18 · opens the Console tab from the editors' output note
+ *  (same pattern as apriCodice/apriRighe: mobile switches its view,
+ *  desktop activates the tab — or inserts it if the user closed it). ===== */
+function apriConsole() {
+  if (isMobile()) { dock.setMobileTab('console'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+  else dock.activateOrInsert('console');
 }
 function renderCodice(box) {
   box.innerHTML = '';
@@ -2445,17 +2850,29 @@ function renderCodice(box) {
     ta.value = curTab.storage === 'code'
       ? (typeof st.customCode === 'string' ? st.customCode : curTab.original)
       : ((st.customFiles && typeof st.customFiles[curTab.name] === 'string') ? st.customFiles[curTab.name] : curTab.original);
+    /* ===== NEW v17 · the writing zone is as tall as the program: the
+       textarea grows with its content and the PANEL scrolls when it
+       does not fit (see armAutogrow). ===== */
+    armAutogrow(ta, 260);
     wrap.appendChild(ta);
+    /* ===== CHANGED v18 · this panel is an EDITOR ONLY: the output console
+       that used to live below the textarea is GONE — one console for the
+       whole app, the Console tab. In its place a compact note that always
+       says where the output went, with a button that opens the Console
+       (updated live by updateCodiceOut after every run). NB: elHtml()
+       returns ONE element — the note is built and appended on its own. ===== */
     const acts = elHtml(`<div class="ex-actions" style="margin-top:0">
       <button class="btn primary" id="cdRun">▶ run</button>
       <button class="btn" id="cdReset" title="Discard the edits: go back to the original program (passed steps or database project)">⟲ restore original</button>
       <button class="btn tiny" id="cdCopy" title="Copy the code to the clipboard">copy</button>
-      <button class="btn tiny" id="cdClear" title="Clear the run history (also in the Console panel)">🧹 clear</button>
       <span class="rt-note" id="cdStatus">Ctrl+Enter to run · edits are saved with your progress</span>
     </div>`);
+    const outNote = elHtml(`<div class="ed-out-note">
+      <span data-outnote>▶ Run prints in the <b>Console</b> tab</span>
+      <button class="btn-cl" data-openconsole title="Open the Console tab: output and run history live there">⌨ open Console</button>
+    </div>`);
     wrap.appendChild(acts);
-    const out = elHtml(`<div class="console-out codice-out" id="codiceOut"></div>`);
-    wrap.appendChild(out);
+    wrap.appendChild(outNote);
 
     /* input → arms/disarms the override for this exercise:
        if the text goes back to being IDENTICAL to the original, the override
@@ -2498,16 +2915,16 @@ function renderCodice(box) {
       try { await navigator.clipboard.writeText(ta.value); toast('Code copied to the clipboard.', 'ok'); }
       catch (err) { toast('Copy not available in this browser.', 'warn'); }
     });
-    acts.querySelector('#cdClear').addEventListener('click', () => {
-      st.runs = []; st.outputs = []; delete st.verificato;
-      saveProgress(); updateCodiceOut(); dock.refreshPanels(['console']);
-    });
+    /* ===== REMOVED v18 · the "🧹 clear" button went away together with the
+       embedded terminal: the run history is managed from the Console tab
+       (its own "clear" button), which is now the only place it is shown. ===== */
+    const openConsoleBtn = wrap.querySelector('[data-openconsole]');
+    if (openConsoleBtn) openConsoleBtn.addEventListener('click', () => apriConsole());
     /* FIX v10 · during renderLayout() the panel is still DETACHED from
        the document (the dock mounts it only at the end): getElementById
        in here finds null. The badge updates in the next frame, when
        the tree is already attached. */
-    requestAnimationFrame(() => { aggiornaBadgeCodice(e); out.scrollTop = out.scrollHeight; });
-    renderCodiceOut(out, e);
+    requestAnimationFrame(() => { aggiornaBadgeCodice(e); updateCodiceOut(); });
   })();
   const cdToRighe = wrap.querySelector('#cdToRighe');   // ===== NEW v12 · link to the lightweight editor =====
   if (cdToRighe) cdToRighe.addEventListener('click', () => apriRighe());
@@ -2690,9 +3107,12 @@ function renderGuida(box) {
       <p>The blue <b>keywords</b> are clickable: <b>first click</b> = concept, <b>second click</b> = syntax, <b>full hint</b> = the whole line.</p>
     </div>
     <div class="guide-sec">
-      <h3>🧭 Finding your way around <span class="chip acc" style="font-size:.59375rem">new in v16</span></h3>
+      <h3>🧭 Finding your way around <span class="chip acc" style="font-size:.59375rem">updated in v18</span></h3>
       <p>· The <b>☰ Modules</b> tree (199 exercises) is a <b>slide-out menu</b> on the left: open it from the first icon of the activity bar — or from ☰ in the header on a phone — pick an exercise, and it closes by itself.</p>
+      <p>· <b>Hover the left bar</b> and it expands like a bubble, showing the <b>full names</b> of the panels; each button has <b>one name</b> — the same name of the tab it opens. Move away and it shrinks back to the icons (the keyboard gets the same with Tab: focus expands it).</p>
       <p>· The <b>icons on the left bar are toggles</b>: click the icon of the panel you are looking at and the panel <b>closes</b>; click again and it comes back. The × on each tab does the same.</p>
+      <p>· The <b>account button is in the top-right corner</b>: it shows your avatar and the exercises completed; a click opens the summary (progress, autonomy, sync) and the <b>⚙ edit</b> bridge to the Settings.</p>
+      <p>· The <b>⚙ Settings</b> (last icon of the left bar, or ⚙ on a phone) hold the <b>dark / light theme</b> (both keep terminals and code areas black), the <b>access credentials</b> and the <b>privacy</b> switches.</p>
       <p>· This <b>Guide</b> is an overlay: it never takes space away from the code.</p>
       <p>· On a phone, the bottom bar holds the four tabs you use between two taps; everything else is in the <b>⋯ More</b> menu.</p>
     </div>
@@ -2700,7 +3120,7 @@ function renderGuida(box) {
       <h3>⌨ The Code editor, in full</h3>
       <p>The <b>⌨ code</b> button next to "▶ Run" opens the exercise's <b>full program</b> — exactly the code the Run button sends to the runtime. One line under the title tells you which program you are looking at; the details are these:</p>
       <p>· You can <b>modify it</b> freely: from that moment "Run and check the output" runs <b>your version</b> (marked ⚠, saved with your progress) — so you can reach the same result <b>in a different way</b> than the predetermined solution. The soft output check stays active: if your program prints the expected lines, the "✓" arrives.</p>
-      <p>· The panel works as a <b>terminal</b>: <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> runs, the output appears below with the <code>student@tutor:~$</code> prompt and the blinking cursor; the full history stays in the Console panel.</p>
+      <p>· <b>Editors only, one console</b> (v18): the <b>Code</b> and <b>Lines</b> tabs are pure writing space — no terminal below the editor. <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> runs, and the <b>output lands in the Console tab</b>: a note under the editor tells you where it went and a button takes you there. The full history and the "clear" command live in the Console.</p>
       <p>· <b>Fragments of a larger program</b> (the ch. 12–14 games, class extensions…): the steps are pieces of a whole project. The editor shows <b>all the files</b>, from the initial imports to the end, and ▶ Run always executes the <b>full project</b> — with your edits, file by file (e.g. change a speed in <code>settings.py</code> and the game starts with it).</p>
       <p>· <b>Multi-file exercises</b>: one tab per file, from the main to the last module; ▶ Run executes <b>your files</b>.</p>
       <p>· <b>Support modules</b> (read-only project files from the local database) sit in the last tabs: they run together with your program, you don't rewrite them.</p>
@@ -2755,6 +3175,7 @@ function renderSandbox(box) {
   const ta = wrap.querySelector('#sandboxTa');
   ta.value = S.drafts['sandbox'] || SANDBOX_SAMPLES['Welcome'];
   ta.addEventListener('input', () => { S.drafts['sandbox'] = ta.value; });
+  armAutogrow(ta, 240);   // ===== NEW v17 · same treatment as the Code editor =====
   const out = wrap.querySelector('#sbOut');
   const campionamenti = wrap.querySelector('.sandbox-samples');
   Object.keys(SANDBOX_SAMPLES).forEach(nome => {
@@ -2805,9 +3226,9 @@ function renderAccount(box) {
     <h2 class="pan-title">${icon('user')} Account and sync</h2>
     <p class="pan-sub">Your progress is <b>always</b> safe in the browser. The account is only to find it again on another device.</p>
     ${!configured
-      ? `<div class="sync-banner off">⚠ Supabase not configured: the app is in <b>local mode</b>.</div>`
+      ? `<div class="sync-banner off">⚠ Cloud accounts not configured — your progress stays in this browser. <b>Owner:</b> fill <code>config.js → SUPABASE</code> to activate the sync (see Settings → credentials).</div>`
       : stato === 'error'
-        ? `<div class="sync-banner off">⚠ Last sync failed.</div>`
+        ? `<div class="sync-banner off">⚠ Cloud unreachable — check url/anonKey in config.js.</div>`
         : !utente
           ? `<div class="sync-banner local">☁ Cloud ready: sign in to sync.</div>`
           : `<div class="user-chip">${icon('user')}<div><b>${esc(utente.email || 'user')}</b></div></div>`
@@ -2830,6 +3251,11 @@ function renderAccount(box) {
         <button class="btn" id="btnSyncNow">⟳ Sync now</button>
         <button class="btn danger" id="btnLogout">Sign out</button>
       </div>`: ''}
+    <!-- ===== NEW v17 · bridge to the Settings overlay: credentials,
+         privacy and theme live there now. ===== -->
+    <div class="step-actions" style="margin-top:8px">
+      <button class="btn tiny" id="btnStgFromAccount">⚙ settings — credentials, privacy, theme</button>
+    </div>
   </div>`);
   const msg = wrap.querySelector('#authMsg');
   const btLogin = wrap.querySelector('#btnLogin');
@@ -2856,7 +3282,9 @@ function renderAccount(box) {
   const btSync = wrap.querySelector('#btnSyncNow');
   if (btSync) btSync.addEventListener('click', async () => { await storage.sincronizzaOra(); dock.refreshPanels(['account', 'progressi']); renderStatus(); });
   const btOut = wrap.querySelector('#btnLogout');
-  if (btOut) btOut.addEventListener('click', async () => { await storage.esci(); toast('Signed out.', ''); dock.refreshPanels(['account', 'progressi']); renderStatus(); });
+  if (btOut) btOut.addEventListener('click', async () => { await storage.esci(); toast('Signed out.', ''); dock.refreshPanels(['account', 'progressi']); renderStatus(); renderAccountChrome(); });
+  const btStg = wrap.querySelector('#btnStgFromAccount');   // ===== NEW v17 =====
+  if (btStg) btStg.addEventListener('click', () => toggleImpostazioni(true));
   box.appendChild(wrap);
 }
 
@@ -2873,12 +3301,15 @@ function renderStatus() {
       py.status === 'loading' ? `<span class="sb-chip busy"><span class="spin"></span> runtime…</span>` :
         py.status === 'error' ? `<span class="sb-chip err" data-act="sandbox">runtime ✗</span>` :
           `<span class="sb-chip" data-act="sandbox">Python (Pyodide) not loaded</span>`;
+  /* ===== CHANGED v18 · online-site wording: "local mode"/"local only"
+     became "sign in to sync" (the app is on the web: the account is the
+     feature, offline stays the fallback) and "cloud off" (not configured). ===== */
   const syncChip =
     sync === 'synced' ? `<span class="sb-chip ok" data-act="account">☁ synced</span>` :
       sync === 'syncing' ? `<span class="sb-chip busy"><span class="spin"></span> sync…</span>` :
         sync === 'error' ? `<span class="sb-chip err" data-act="account">sync ✗</span>` :
-          sync === 'local' ? `<span class="sb-chip acc" data-act="account">☁ local mode</span>` :
-            `<span class="sb-chip" data-act="account">☁ local only</span>`;
+          sync === 'local' ? `<span class="sb-chip acc" data-act="account" title="The app is online: sign in (Account panel) and your progress follows you on every device">☁ sign in to sync</span>` :
+            `<span class="sb-chip" data-act="account" title="Cloud sync disabled: fill url/anonKey in config.js to activate the accounts">☁ cloud off</span>`;
   sb.innerHTML = `
     <span class="sb-item"><b style="color:var(--text)">${py.status === 'ready' ? 'Python ' + esc(py.version || '3.14') : 'Python (Pyodide)'}</b></span>
     <span class="sb-item">📂 Ch. ${e.ch} · ${esc(CH[e.ch - 1].t)}</span>
@@ -2897,6 +3328,7 @@ function renderStatus() {
     el.setAttribute('role', 'button');
     el.setAttribute('tabindex', '0');
   });
+  renderAccountChrome();   // ===== NEW v17 · keeps the top-right count in sync =====
 }
 
 /* ---------- mobile header ---------- */
@@ -2913,10 +3345,14 @@ function mobileHeadHtml() {
       <div class="s">${st.done ? 'completed ✓' : 'step ' + Math.min(st.solved + 1, e.steps.length) + ' of ' + e.steps.length}</div>
     </div>
     <!-- ===== CHANGED v16 · the ☰ drawer and the ? guide overlay replace the
-         old flat tab bar entries (they were always-visible tabs before) ===== -->
-    <button class="tl-btn" data-mact="moduli" title="Modules and exercises (slide-out menu)" aria-label="Open the modules menu" style="padding:5px 9px">☰</button>
-    <button class="tl-btn" data-mact="guida" title="How the method works (overlay)" aria-label="Open the guide" style="padding:5px 9px">?</button>
-    <button class="tl-btn" data-mact="account" title="Account and sync" style="padding:5px 9px">${sync === 'synced' ? '☁ ✓' : '☁'}</button>`;
+         old flat tab bar entries (they were always-visible tabs before).
+         ===== CHANGED v18 · same single names as the sidebar buttons. ===== -->
+    <button class="tl-btn" data-mact="moduli" title="Modules" aria-label="Open the modules menu" style="padding:5px 9px">☰</button>
+    <button class="tl-btn" data-mact="guida" title="Guide" aria-label="Open the guide" style="padding:5px 9px">?</button>
+    <button class="tl-btn" data-mact="account" title="Account" style="padding:5px 9px">☁</button>
+    <!-- ===== NEW v17 · Settings on mobile too (theme, credentials, privacy):
+         same overlay as the desktop sidebar gear. ===== -->
+    <button class="tl-btn" data-mact="impostazioni" title="Settings" aria-label="Open the settings" style="padding:5px 9px">⚙</button>`;
 }
 
 /* ---------- default layout and panel registry ---------- */
@@ -2950,7 +3386,7 @@ const Panels = {
      chapter concepts are inside the Exercise panel — and the dock strips
      it from layouts saved by older versions (unknown pid → tab dropped). ===== */
   esercizio: { id: 'esercizio', title: 'Exercise', icon: 'code', render: renderEsercizio },
-  codice: { id: 'codice', title: 'Code', icon: 'filecode', render: renderCodice },   // ===== NEW v10 · full program editor + terminal =====
+  codice: { id: 'codice', title: 'Code', icon: 'filecode', render: renderCodice },   // ===== NEW v10 · full program editor — v18: editor only, output in the Console tab =====
   righe:  { id: 'righe',  title: 'Lines',  icon: 'rows',    render: renderRighe },    // ===== NEW v12 · lightweight editor: only the exercise lines =====
   console: { id: 'console', title: 'Console', icon: 'term', render: renderConsole },
   grafici: { id: 'grafici', title: 'Charts', icon: 'chart', render: renderGrafici },   // ===== NEW =====
@@ -3014,10 +3450,15 @@ const dock = createDock({
   storageKey: KEYS.layout,
   toast,
   mobileHead: mobileHeadHtml,
-  /* ===== NEW v16 · the two special activity-bar icons do not insert a
-     dock tab: they open the Modules drawer and the Guide overlay. ===== */
-  specialPanels: { moduli: true, guida: true },
-  onSpecial: pid => { if (pid === 'moduli') toggleDrawer(); else if (pid === 'guida') toggleGuida(); },
+  /* ===== CHANGED v16 · the special activity-bar icons do not insert a
+     dock tab: they open the Modules drawer, the Guide overlay and (NEW v17)
+     the Settings overlay. ===== */
+  specialPanels: { moduli: true, guida: true, impostazioni: true },
+  onSpecial: pid => {
+    if (pid === 'moduli') toggleDrawer();
+    else if (pid === 'guida') toggleGuida();
+    else if (pid === 'impostazioni') toggleImpostazioni();   // ===== NEW v17 =====
+  },
   /* ===== CHANGED v16.1 · every layout/tab change restores the auto-hidden
      header: a freshly rendered panel starts at scrollTop 0, where an
      upward flick is impossible and the bar would stay trapped off-screen. ===== */
@@ -3068,7 +3509,14 @@ function init() {
   }).catch(() => { toast('⚠ Solutions database unavailable: running without support files.', 'warn'); });
   onPythonStatus(() => { renderStatus(); });
   storage.onSyncChange(() => { renderStatus(); });
-  storage.onAuthChange(() => { renderStatus(); dock.refreshPanels(['account', 'progressi']); });
+  /* ===== NEW v18 · Supabase health check (see engine/storage.js): a
+     configured-but-unreachable project is announced once and loudly,
+     instead of failing silently as a fake "local mode". ===== */
+  window.addEventListener('tutor:supabase-unreachable', () => {
+    renderStatus();
+    toast('⚠ Supabase unreachable — check <b>url</b> and <b>anonKey</b> in config.js.', 'warn');
+  });
+  storage.onAuthChange(() => { renderStatus(); renderAccountChrome(); dock.refreshPanels(['account', 'progressi']); });
   storage.onRemoteApply((st) => {
     S.progress = st.progress || {};
     if (st.current) S.current = st.current;
@@ -3093,6 +3541,24 @@ function init() {
   });
   /* ===== CHANGED v16 · the Guide is an overlay, not a dock tab ===== */
   $('#btnGuida').addEventListener('click', () => toggleGuida());
+  /* ===== NEW v17 · the ACCOUNT button (top right): popover with info,
+     synthetic progress and the “edit” bridge to Settings. It closes on
+     outside click, on Esc and when the auto-hide header slides away. ===== */
+  const btnAcct = $('#btnAccount');
+  if (btnAcct) {
+    renderAccountChrome();
+    btnAcct.addEventListener('click', ev => { ev.stopPropagation(); toggleAccountPop(); });
+  }
+  document.addEventListener('click', ev => {
+    if (!ACCT.open) return;
+    const pop = document.querySelector('.acct-pop');
+    if (pop && !pop.contains(ev.target) && !ev.target.closest('#btnAccount')) closeAccountPop();
+  });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && ACCT.open) closeAccountPop(); }, true);
+  /* the popover is anchored to the titlebar: when the bar auto-hides
+     (head-off) the popover must not stay floating alone over the panels */
+  new MutationObserver(() => { if (document.body.classList.contains('head-off')) closeAccountPop(); })
+    .observe(document.body, { attributes: true, attributeFilter: ['class'] });
   $('#statusbar').addEventListener('click', ev => {
     const t = ev.target.closest('[data-act]'); if (!t) return;
     if (isMobile()) { dock.setMobileTab(t.dataset.act); dock.renderMobilePanel(); dock.renderMobileNav(); }
@@ -3110,10 +3576,12 @@ function init() {
   $('#mHead').addEventListener('click', ev => {
     const t = ev.target.closest('[data-mact]'); if (!t) return;
     /* ===== CHANGED v16 · ☰ opens the Modules drawer and ? the Guide
-     overlay; the cloud button still switches to the Account tab. ===== */
+       overlay; the cloud button still switches to the Account tab.
+       ===== NEW v17 · ⚙ opens the Settings overlay. ===== */
     if (t.dataset.mact === 'moduli') toggleDrawer();
     else if (t.dataset.mact === 'guida') toggleGuida();
     else if (t.dataset.mact === 'account') { dock.setMobileTab('account'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+    else if (t.dataset.mact === 'impostazioni') toggleImpostazioni();
   });
   let rzT = null;
   window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => dock.applyMode(false), 160); });

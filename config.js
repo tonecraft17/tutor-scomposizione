@@ -4,7 +4,11 @@
 
 export const APP = {
   name: 'Tutor · Progressive Breakdown',
-  subtitle: 'Python Crash Course — Exercises Ch. 1–20 + Appendices D–E',
+  /* ===== CHANGED v18 · the titlebar sub-brand keeps only the book name:
+       the "Exercises Ch. 1–20 + Appendices" enumeration lived in the header
+       for historical reasons — the Modules drawer already lists every
+       chapter, so the header stays short. ===== */
+  subtitle: 'Python Crash Course',
 };
 
 /* ---------- Python runtime (Pyodide) ---------- */
@@ -30,12 +34,32 @@ export const PLOTLY_JS = {
   url: 'https://cdn.plot.ly/plotly-2.35.2.min.js',
 };
 
-/* ---------- Supabase ---------- */
+/* ---------- Supabase ----------
+   ===== CHANGED v18 · THE SITE IS ONLINE, so the cloud sync is a real
+   feature now — this section is the ONE thing left to fill for the
+   deployed copy. Three steps (5 minutes):
+     1 · create a project on https://supabase.com (free tier is enough);
+     2 · open the project's SQL Editor and run supabase/schema.sql
+        (creates user_progress with Row Level Security + realtime);
+     3 · paste the two values below from Project Settings → API:
+          · url      → "Project URL"               (https://xxxx.supabase.co)
+          · anonKey  → "anon public" key           (NOT the service key!)
+     Then redeploy. From that moment the status chip, the Account panel
+     and Settings → credentials activate (sign in / sign up / sync), and
+     storage.init() probes /auth/v1/health so a wrong URL/key shows
+     "sync ✗" immediately instead of failing silently.
+     In Supabase → Authentication → URL Configuration also set the
+     Site URL to the deployed address, so confirmation/recovery emails
+     land on the right pages. Until both fields are filled the app runs
+     in browser-only mode and nothing is ever sent anywhere. ===== */
 export const SUPABASE = {
   url: '',
   anonKey: '',
   umdUrl: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js',
   syncDebounceMs: 1200,
+  /* health endpoint used by engine/storage.js to verify the credentials
+     right after the client is created (GET {url}/auth/v1/health) */
+  healthPath: '/auth/v1/health',
 };
 
 export function supabaseConfigured() {
@@ -63,4 +87,9 @@ export const KEYS = {
   current: 'tutorCurrent',
   layout: 'tutorLayoutV12',   // ===== CHANGED v12 · new default layout: ⌨/✎ editor in its own tab (split from the console) =====
   seen: 'tutorSeen',
+  /* ===== NEW v17 · Settings overlay state: the UI theme ('dark' default or
+     'light' — styles-light.css is scoped under [data-theme="light"]) and the
+     privacy switch that turns the cloud mirror off/on. ===== */
+  theme: 'tutorTheme',
+  syncEnabled: 'tutorSyncEnabled',
 };
