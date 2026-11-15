@@ -1,923 +1,4268 @@
 /* ============================================================
-   TUTOR · styles-light.css — THE LIGHT THEME (v17)
-   ------------------------------------------------------------
-   This file is now PART OF THE PROJECT: it is the light half of the
-   dark/light switch in Settings → Appearance (the dark half is
-   styles.css, untouched). It is ALWAYS loaded — after styles.css —
-   but every rule is scoped under [data-theme="light"], so in dark
-   mode it costs nothing and the switch (applyTheme() in app.js)
-   flips <html data-theme> with NO reload and NO flash (the
-   bootstrap <script> in index.html applies the attribute before
-   the first paint).
-
-   THE RULE THE STUDENT ASKED FOR: in BOTH themes the terminals and
-   every code-WRITING area stay BLACK — a terminal is dark in any
-   theme, and the syntax colors are tuned for it. See section 6:
-   .codice-ta, .rg-ta, .sandbox-ta, .code-input, the consoles, the
-   step code blocks and the input() prompt all keep the dark
-   surfaces of styles.css (and color-scheme:dark, so their internal
-   scrollbars/carets match).
-
-   The light theme is NOT plain white: it is a PLAYFUL pastel set —
-   warm cream titlebar, baby-blue activity bar, mint status bar,
-   lilac workbench, white cards, violet accent, 14px base radius.
+   TUTOR — Scomposizione Progressiva · stile "VS Code 2026"
    ============================================================ */
-
-/* ---------- 1 · palette (scoped: only when the attribute is on) ---------- */
-html[data-theme="light"] {
-  color-scheme: light;
-  --bg: #f3f0fa;            /* lilac workbench */
-  --bg2: #faf8ff;           /* near-white lilac */
-  --panel: #ffffff;         /* cards */
-  --panel2: #f4f1fb;
-  --panel3: #ece7f8;
-  --border: #ddd6ee;
-  --border2: #c8bfe4;
-  --text: #2e2a45;          /* dark plum */
-  --dim: #5c5580;
-  --faint: #6f6892;
-  --acc: #5b48e8;           /* violet */
-  --acc-soft: rgba(91, 72, 232, .10);
-  --acc-line: rgba(91, 72, 232, .42);
-  --ok: #0f9960;
-  --ok-soft: rgba(15, 153, 96, .12);
-  --warn: #a66a00;
-  --warn-soft: rgba(166, 106, 0, .10);
-  --err: #d2324e;
-  --err-soft: rgba(210, 50, 78, .10);
-  --purple: #8b3ee8;
-  --yellow: #9a6b00;
-  --cyan: #0b7f9e;
-  /* rounder: the playful theme doubles the base radius */
-  --rad: 14px;
-}
-
-/* ---------- 2 · base ---------- */
-html[data-theme="light"] body {
-  background: var(--bg);
-  color: var(--text);
-}
-
-html[data-theme="light"] ::-webkit-scrollbar-thumb {
-  background: #c9c2e0;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-html[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
-  background: #b0a5d6;
-  background-clip: padding-box;
-}
-
-html[data-theme="light"] ::selection {
-  background: rgba(91, 72, 232, .20);
-}
-
-html[data-theme="light"] input:focus-visible,
-html[data-theme="light"] textarea:focus-visible {
-  outline: 2px solid var(--acc);
-  outline-offset: -1px;
-}
-
-/* ---------- 3 · chrome: one pastel per zone ---------- */
-/* titlebar: warm cream */
-html[data-theme="light"] .titlebar {
-  background: #fdf6ec;
-  border-bottom: 1px solid #f0e4cf;
-}
-
-/* activity bar: baby blue (expansion shadow softens too) */
-html[data-theme="light"] .activitybar {
-  background: #eef2fd;
-  border-right: 1px solid #dce4f8;
-}
-
-html[data-theme="light"] .activitybar:hover,
-html[data-theme="light"] .activitybar:focus-within {
-  box-shadow: 18px 0 46px rgba(90, 70, 160, .22);
-}
-
-html[data-theme="light"] .act-btn:hover {
-  background: #e2e9fb;
-}
-
-html[data-theme="light"] .act-btn.active::before {
-  background: var(--acc);
-}
-
-/* status bar: mint */
-html[data-theme="light"] .statusbar {
-  background: #ecf8f0;
-  border-top: 1px solid #d7ecdd;
-}
-
-/* dock tab strip: lilac tint (the groups below are white) */
-html[data-theme="light"] .dk-tabs {
-  background: #f0edf9;
-}
-
-html[data-theme="light"] .dk-group {
-  background: var(--panel);
-}
-
-html[data-theme="light"] .dk-gutter:hover::after,
-html[data-theme="light"] .dk-gutter.active::after {
-  background: var(--acc);
-}
-
-/* mobile chrome: cream head, mint bottom bar */
-html[data-theme="light"] .m-head {
-  background: #fdf6ec;
-  border-bottom: 1px solid #f0e4cf;
-}
-
-html[data-theme="light"] .m-nav {
-  background: #ecf8f0;
-  border-top: 1px solid #d7ecdd;
-}
-
-html[data-theme="light"] .m-more-btn.active {
-  color: var(--acc);
-  background: var(--acc-soft);
-}
-
-/* dragging ghost and its shadow */
-html[data-theme="light"] .dk-ghost {
-  background: #ffffff;
-  box-shadow: 0 8px 30px rgba(90, 70, 160, .25);
-}
-
-/* ---------- 4 · common components: rounder, softer ---------- */
-html[data-theme="light"] .tl-btn {
-  border-radius: 10px;
-}
-
-html[data-theme="light"] .searchbox {
-  border-radius: 10px;
-  background: #ffffff;
-}
-
-html[data-theme="light"] .searchbox:focus-within {
-  box-shadow: 0 0 0 2px rgba(91, 72, 232, .14);
-}
-
-html[data-theme="light"] .btn {
-  border-radius: 11px;
-}
-
-html[data-theme="light"] .btn.tiny {
-  border-radius: 9px;
-}
-
-html[data-theme="light"] .dk-tab {
-  border-radius: 10px 10px 0 0;
-}
-
-html[data-theme="light"] .tree-ch-head,
-html[data-theme="light"] .tree-ex {
-  border-radius: 10px;
-}
-
-html[data-theme="light"] .road-item {
-  border-radius: 9px;
-}
-
-html[data-theme="light"] .toast {
-  border-radius: 12px;
-  box-shadow: 0 10px 34px rgba(90, 70, 160, .22);
-}
-
-html[data-theme="light"] .m-more-menu {
-  border-radius: 14px;
-  box-shadow: 0 18px 50px rgba(90, 70, 160, .22);
-}
-
-/* colored chips: the dark rgba tints become pastel ones */
-html[data-theme="light"] .chip.purple {
-  background: rgba(139, 62, 232, .10);
-}
-
-html[data-theme="light"] .chip.cy {
-  background: rgba(11, 127, 158, .10);
-}
-
-html[data-theme="light"] .sb-chip.pkg {
-  background: rgba(11, 127, 158, .10);
-}
-
-/* ---------- 5 · exercise: steps, hints, prose ---------- */
-html[data-theme="light"] .step-cur {
-  box-shadow: 0 4px 18px rgba(90, 70, 160, .12);
-}
-
-html[data-theme="light"] .kw:hover {
-  background: rgba(91, 72, 232, .08);
-}
-
-html[data-theme="light"] .hint-card {
-  border-color: rgba(139, 62, 232, .30);
-  border-radius: 13px;
-  background: rgba(139, 62, 232, .06);
-}
-
-html[data-theme="light"] .hint-card .hint-cta {
-  border-color: rgba(139, 62, 232, .30);
-  border-radius: 10px;
-}
-
-html[data-theme="light"] .hint-card .hint-cta:hover {
-  background: rgba(139, 62, 232, .12);
-}
-
-html[data-theme="light"] .kw.used {
-  border-bottom-color: rgba(139, 62, 232, .5);
-}
-
-html[data-theme="light"] .note {
-  border-radius: 0 11px 11px 0;
-}
-
-/* the reflect box is PROSE, not code: light like the rest of the UI */
-html[data-theme="light"] .reflect-box textarea {
-  background: #ffffff;
-  color: var(--text);
-  border-radius: 12px;
-}
-
-/* auth / settings inputs: white, dark text */
-html[data-theme="light"] .field input {
-  background: #ffffff;
-  color: var(--text);
-  border-radius: 9px;
-}
-
-/* ---------- 6 · TERMINALS AND CODE AREAS STAY BLACK ----------
-   The deliberate survivors: every surface where you WRITE code or
-   read a terminal keeps the dark background of styles.css, its light
-   text and the dark-tuned Python syntax colors. color-scheme:dark
-   keeps their inner scrollbars and carets dark too. */
-html[data-theme="light"] .codice-ta,
-html[data-theme="light"] .sandbox-ta,
-html[data-theme="light"] .code-area,
-html[data-theme="light"] .code-input,
-html[data-theme="light"] .console-box,
-html[data-theme="light"] .console-head,
-html[data-theme="light"] .step-done pre,
-html[data-theme="light"] .ex-final pre,
-html[data-theme="light"] .hint-card code.syn,
-html[data-theme="light"] .input-modal-field,
-html[data-theme="light"] #sbOut {
-  background: #14151a;
-  color: #e8eaf0;
-  border-color: #2c2e38;
-  color-scheme: dark;
-}
-
-html[data-theme="light"] .console-box,
-html[data-theme="light"] #sbOut {
-  background: #101216;
-}
-
-/* the console OUTPUT area is transparent inside its dark .console-box
-   (no background in styles.css either): it only needs the dark scheme
-   for its scrollbar — its colors come from the box around it */
-html[data-theme="light"] .console-out {
-  color-scheme: dark;
-}
-
-html[data-theme="light"] .console-head {
-  background: #15171b;
-}
-
-/* code tabs keep their var-based look — readable on the lilac panel */
-
-/* the drawer's filter box is a SEARCH, not code: white */
-html[data-theme="light"] .drawer-search input {
-  background: #ffffff;
-  color: var(--text);
-  border-radius: 10px;
-}
-
-/* ---------- 7 · charts: white cards (Matplotlib PNGs are white) ---------- */
-html[data-theme="light"] .graph-card {
-  background: #ffffff;
-  border-color: var(--border);
-}
-
-html[data-theme="light"] .graph-card-head {
-  background: #f4f1fb;
-  border-bottom-color: var(--border);
-}
-
-html[data-theme="light"] .graph-close:hover {
-  border-color: var(--err);
-  background: var(--err-soft);
-  color: var(--err);
-}
-
-html[data-theme="light"] .plotly-err {
-  background: #ffffff;
-}
-
-/* the fullscreen scrim and its glassy pills stay dark on purpose
-   (they float OVER a chart) — unchanged from styles.css */
-
-/* ---------- 8 · game: stage and scrims dark, pad light ---------- */
-html[data-theme="light"] .game-canvas {
-  border-radius: 11px;
-}
-
-html[data-theme="light"] .game-pad {
-  background: linear-gradient(#ffffff, #f1edfa);
-}
-
-html[data-theme="light"] .gp {
-  border-radius: 18px;
-  background: linear-gradient(#ffffff, #ece7f8);
-  border-color: #c8bfe4;
-  box-shadow: 0 3px 0 #cfc6e8;
-  color: #2e2a45;
-}
-
-html[data-theme="light"] .gp-fire {
-  border-radius: 20px;
-  background: linear-gradient(#e6e0fd, #d3c8fb);
-  border-color: #b3a4f0;
-  color: #4a35c9;
-}
-
-html[data-theme="light"] .gp-q {
-  border-radius: 16px;
-}
-
-/* ---------- 9 · drawer, overlays, modal, popover ---------- */
-html[data-theme="light"] .drawer {
-  background: var(--panel);
-  box-shadow: 24px 0 70px rgba(90, 70, 160, .28);
-  border-radius: 0 22px 22px 0;
-}
-
-html[data-theme="light"] .drawer-bg,
-html[data-theme="light"] .ovl-bg,
-html[data-theme="light"] .modal-bg {
-  background: rgba(58, 48, 92, .42);
-}
-
-html[data-theme="light"] .ovl,
-html[data-theme="light"] .ovl.stg {
-  background: var(--panel);
-  box-shadow: 0 30px 90px rgba(58, 48, 92, .35);
-  border-radius: 18px;
-}
-
-html[data-theme="light"] .ovl-x,
-html[data-theme="light"] .drawer-x {
-  border-radius: 10px;
-}
-
-html[data-theme="light"] .ovl-x:hover,
-html[data-theme="light"] .drawer-x:hover {
-  background: var(--panel2);
-}
-
-html[data-theme="light"] .modal {
-  border-radius: 18px;
-  box-shadow: 0 24px 70px rgba(58, 48, 92, .30);
-}
-
-/* the account popover (NEW v17) */
-html[data-theme="light"] .acct-pop {
-  background: var(--panel);
-  box-shadow: 0 26px 70px rgba(58, 48, 92, .30);
-}
-
-html[data-theme="light"] .acct-pop .apa {
-  background: var(--acc-soft);
-  border-color: var(--acc-line);
-  color: var(--acc);
-}
-
-html[data-theme="light"] .acct-pop .ap-prog {
-  background: var(--panel2);
-}
-
-html[data-theme="light"] .acct-pop .ap-prog .bar {
-  background: var(--panel3);
-}
-
-/* settings bits that need a pastel push beyond the vars */
-html[data-theme="light"] .theme-card {
-  background: #ffffff;
-}
-
-html[data-theme="light"] .switch i {
-  background: #b0a8d0;
-}
-
-/* mobile: the sheets round only at the top */
-@media (max-width:768px) {
-  html[data-theme="light"] .modal {
-    border-radius: 18px 18px 0 0;
-  }
-
-  html[data-theme="light"] .ovl {
-    border-radius: 18px 18px 0 0;
-  }
-}
-
-/* ---------- 10 · details ---------- */
-html[data-theme="light"] .tbl-ex td {
-  border-bottom-color: rgba(221, 214, 238, .9);
-}
-
-html[data-theme="light"] .console-out .run-block.sol {
-  border-left-color: #8b5cf6;
-  background: rgba(139, 92, 246, .07);
-}
-
-/* the brand mark keeps its blue stroke — it reads well on cream too */
-
-/* ---------- 11 · high contrast (OS preference), light edition ---------- */
-@media (prefers-contrast: more) {
-  html[data-theme="light"] {
-    --border: #b6abd8;
-    --border2: #9c8ec6;
-    --dim: #463f66;
-    --faint: #544c78;
-    --text: #201b36;
-  }
-}
-
-/* ============================================================
-   TUTOR · styles-light.css — TEST-ONLY light theme (v16.2)
-   ------------------------------------------------------------
-   Questo file NON fa parte del tema principale del progetto: è un
-   tema chiaro "user friendly" da usare come prova (bordi più
-   arrotondati, colori più chiari, superfici morbide).
-
-   HOW TO TEST (two equivalent ways — pick one):
-   1) REPLACE the stylesheet in index.html:
-        <link rel="stylesheet" href="styles.css?v=16.2">
-      becomes
-        <link rel="stylesheet" href="styles-light.css">
-   2) or ADD it right AFTER the main one (it only overrides):
-        <link rel="stylesheet" href="styles.css?v=16.2">
-        <link rel="stylesheet" href="styles-light.css">
-      (remove line 2 to go back to the dark theme)
-
-   It imports the main stylesheet and re-decorates it: every layout
-   rule, every component size and all the behaviour (drawer, overlay,
-   full screen, mobile) come from styles.css — only colors, shadows
-   and radii change here. The two deliberately DARK survivors:
-   · the Console / terminal (a terminal is expected to be dark, and
-     its output colors are tuned for it);
-   · the immersive Game stage and the full-screen scrims (a game
-     screen is black in any theme).
-
-   Optional: for a coherent browser UI on a phone also change the
-   meta theme-color in index.html from #17181c to #eef1f6.
-   ============================================================ */
-
-@import url("styles.css?v=16.2");
-
-/* ---------- 1 · palette ---------- */
 :root {
-  color-scheme: light;
-  --bg: #eef1f6;
-  --bg2: #f6f8fb;
-  --panel: #ffffff;
-  --panel2: #f2f5f9;
-  --panel3: #e9edf4;
-  --border: #d8dfe9;
-  --border2: #c3cddb;
-  --text: #232a36;
-  --dim: #4d586b;
-  --faint: #5d6a80;
-  --acc: #2563eb;
-  --acc-soft: rgba(37, 99, 235, .10);
-  --acc-line: rgba(37, 99, 235, .45);
-  --ok: #15803d;
-  --ok-soft: rgba(21, 128, 61, .12);
-  --warn: #92400e;
-  --warn-soft: rgba(146, 64, 14, .10);
-  --err: #d1242f;
-  --err-soft: rgba(209, 36, 47, .10);
-  --purple: #7c3aed;
-  --yellow: #9a6700;
-  --cyan: #0e7490;
-  /* bordi arrotondati: il raggio base passa da 9 a 14 px */
-  --rad: 14px;
+  color-scheme: dark;
+  --bg: #17181c;
+  --bg2: #1c1d22;
+  --panel: #212228;
+  --panel2: #26272e;
+  --panel3: #2b2d36;
+  --border: #33353d;
+  --border2: #40434e;
+  --text: #d8dae0;
+  /* a11y · WCAG 2.0 AA 1.4.3: the two muted grays below were raised so that
+     every text use clears 4.5:1 on its real background (worst cases: --faint
+     on the --panel3 id chips, --dim on the amber .note tint). The
+     text > dim > faint hierarchy is preserved. */
+  --dim: #a5abb9;
+  --faint: #959ca9;
+  --acc: #4f9cf7;
+  --acc-soft: rgba(79, 156, 247, .14);
+  --acc-line: rgba(79, 156, 247, .45);
+  --ok: #4cc38a;
+  --ok-soft: rgba(76, 195, 138, .13);
+  --warn: #e5c075;
+  --warn-soft: rgba(229, 192, 117, .12);
+  --err: #f16a6a;
+  --err-soft: rgba(241, 106, 106, .13);
+  --purple: #c397f5;
+  --yellow: #ffd43b;
+  --cyan: #6fd3e7;
+  --mono: "Cascadia Code", "Fira Code", "JetBrains Mono", ui-monospace, Consolas, "Roboto Mono", monospace;
+  --ui: -apple-system, "Segoe UI", system-ui, "Helvetica Neue", Roboto, sans-serif;
+  --rad: 9px;
 }
 
-/* ---------- 2 · base ---------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0
+}
+
+html,
 body {
-  background: var(--bg)
+  height: 100%
+}
+
+body {
+  font-family: var(--ui);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer
+}
+
+input,
+textarea {
+  font-family: inherit;
+  color: inherit
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--faint)
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c2cbd8;
-  border-radius: 8px;
+  background: #3a3d47;
+  border-radius: 6px;
   border: 2px solid transparent;
   background-clip: padding-box
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a9b4c5;
+  background: #4a4e5a;
   background-clip: padding-box
 }
 
-::selection {
-  background: rgba(37, 99, 235, .18)
+::-webkit-scrollbar-corner {
+  background: transparent
 }
 
-/* ---------- 3 · chrome: titlebar, activity bar, statusbar, mobile ---------- */
+svg.ic {
+  width: 15px;
+  height: 15px;
+  display: block;
+  flex: none
+}
+
+/* ---------- Title bar ---------- */
 .titlebar {
-  background: #fbfcfe;
-  border-bottom: 1px solid #e3e8f0
+  height: 38px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  background: #131418;
+  border-bottom: 1px solid #26272d;
+  user-select: none;
+  /* ===== NEW v16.1 · auto-hide on scroll: scrolling DOWN inside any panel
+     slides the bar away (the work area grows by its 38px); scrolling UP
+     brings it back. The class is toggled by the scroll watcher in app.js. ===== */
+  transition: margin-top .26s ease, opacity .26s ease;
+  position: relative;
+  z-index: 30;
 }
 
-.activitybar {
-  background: #f7f9fc;
-  border-right: 1px solid #e3e8f0
+/* v16.1 · hidden state (desktop titlebar + mobile header): the negative
+   margin pulls it out of view AND makes the following section fill the
+   freed space, so no blank strip is left behind */
+body.head-off .titlebar {
+  margin-top: -38px;
+  opacity: 0;
+  pointer-events: none
 }
 
-.statusbar {
-  background: #fbfcfe;
-  border-top: 1px solid #e3e8f0
+body.mobile.head-off .m-head {
+  margin-top: -54px;
+  opacity: 0;
+  pointer-events: none
 }
 
-.m-head {
-  background: #ffffff;
-  border-bottom: 1px solid #e3e8f0
+.tl-dots {
+  display: flex;
+  gap: 7px;
+  align-items: center
 }
 
-.m-nav {
-  background: #ffffff;
-  border-top: 1px solid #e3e8f0
+.tl-dots i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: block
 }
 
-/* dock: la barra delle tab e i gruppi su superfici chiare */
-.dk-tabs {
-  background: #eef1f7
+.tl-dots i.r {
+  background: #ff5f57
 }
 
-.dk-ghost {
-  box-shadow: 0 8px 30px rgba(23, 32, 54, .18)
+.tl-dots i.y {
+  background: #febc2e
 }
 
-/* ---------- 4 · componenti comuni: raggi e superfici ---------- */
-.tl-btn {
-  border-radius: 9px
+.tl-dots i.g {
+  background: #28c840
 }
 
-.act-btn {
-  border-radius: 10px
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: .2px
+}
+
+.brand svg {
+  width: 17px;
+  height: 17px
+}
+
+.brand .sub {
+  font-weight: 400;
+  color: var(--faint);
+  font-size: 0.71875rem;
+  border-left: 1px solid var(--border);
+  padding-left: 10px;
+  margin-left: 2px;
+  white-space: nowrap
+}
+
+.tl-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  min-width: 0
 }
 
 .searchbox {
-  border-radius: 9px
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 4px 10px;
+  width: min(360px, 40vw);
+  color: var(--faint);
 }
 
-.btn {
-  border-radius: 10px
+.searchbox input {
+  background: none;
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 0.75rem;
+  color: var(--text)
 }
 
-.btn.primary {
-  color: #ffffff
+.searchbox:focus-within {
+  border-color: var(--acc-line);
+  box-shadow: 0 0 0 2px rgba(79, 156, 247, .16)
 }
 
-.btn.primary:hover {
-  background: #1d4ed8
+.tl-right {
+  display: flex;
+  gap: 6px;
+  align-items: center
 }
 
-.btn.tiny {
-  border-radius: 8px
+.tl-btn {
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  font-size: 0.75rem;
+  color: var(--dim);
+  /* a11y: transition limited to the animated properties, so the keyboard
+     focus ring (outline) appears instantly instead of fading in */
+  transition: color .15s, border-color .15s, background-color .15s;
+}
+
+.tl-btn:hover {
+  color: var(--text);
+  border-color: var(--border2);
+  background: var(--panel2)
+}
+
+/* ===== NEW v17 · ACCOUNT button (top-right corner of the titlebar):
+   avatar initial + done/total counter in a pill. Clicking it opens the
+   .acct-pop popover below. ===== */
+.tl-acct {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 10px 2px 3px;
+  border-radius: 999px
+}
+
+.tl-acct .apa {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--acc-soft);
+  border: 1px solid var(--acc-line);
+  color: var(--acc);
+  font-weight: 700;
+  font-size: 0.71875rem;
+  text-transform: uppercase
+}
+
+.tl-acct .apn {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums
+}
+
+.tl-acct .apn i {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--faint)
+}
+
+/* ===== NEW v17 · ACCOUNT POPOVER: fixed under the titlebar's right
+   corner, above everything but the overlays. Closes on outside click,
+   Esc, or when the auto-hide header slides away (app.js). ===== */
+.acct-pop {
+  position: fixed;
+  top: 45px;
+  right: 10px;
+  z-index: 1200;
+  width: 302px;
+  max-width: calc(100vw - 20px);
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, .55);
+  padding: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  animation: acct-in .2s cubic-bezier(.25, 1.3, .4, 1)
+}
+
+@keyframes acct-in {
+  from {
+    opacity: 0;
+    transform: translateY(-7px) scale(.98)
+  }
+}
+
+.acct-pop .ap-head {
+  display: flex;
+  align-items: center;
+  gap: 10px
+}
+
+.acct-pop .apa.big {
+  width: 38px;
+  height: 38px;
+  font-size: 0.9375rem
+}
+
+.acct-pop .ap-who {
+  min-width: 0
+}
+
+.acct-pop .ap-who b {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+.acct-pop .ap-who span {
+  font-size: 0.6875rem;
+  color: var(--faint)
+}
+
+.acct-pop .ap-prog {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px
+}
+
+.acct-pop .ap-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.71875rem;
+  color: var(--dim)
+}
+
+.acct-pop .ap-row b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums
+}
+
+.acct-pop .ap-row b i {
+  font-style: normal;
+  color: var(--faint);
+  font-weight: 400
+}
+
+.acct-pop .ap-prog .bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--panel3);
+  overflow: hidden
+}
+
+.acct-pop .ap-prog .bar i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--acc), var(--ok));
+  transition: width .5s cubic-bezier(.25, 1.2, .4, 1)
+}
+
+.acct-pop .ap-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px
+}
+
+/* ---------- Workbench ---------- */
+.workbench {
+  flex: 1;
+  min-height: 0;
+  display: flex
+}
+
+/* ===== CHANGED v17 · HOVER EXPANSION ("bubble" sidebar): at rest the
+   bar is the usual 46px icon strip; on :hover (or :focus-within, for the
+   keyboard) it springs open to 232px showing the FULL panel names, with
+   the same overshoot curve of the Modules drawer. The trick that keeps
+   the dock UNTOUCHED: the expanded bar grows a negative right margin of
+   exactly (232 - 46) px, so its net width in the flex flow stays 46px —
+   the expansion floats OVER the panels (z-index), no reflow, no canvas
+   resize, no splitter jump. Leaving the bar (or blurring it) collapses
+   it back. prefers-reduced-motion kills it with the global switch. ===== */
+.activitybar {
+  width: 46px;
+  flex: none;
+  position: relative;
+  z-index: 40;          /* v17 · the expanded bar overlays the dock */
+  background: #1a1b20;
+  border-right: 1px solid #26272d;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;   /* v17 · the buttons fill the (growing) width */
+  padding: 8px 4px;
+  gap: 4px;
+  transition: width .34s cubic-bezier(.25, 1.45, .4, 1),
+              margin-right .34s cubic-bezier(.25, 1.45, .4, 1),
+              box-shadow .28s ease;
+}
+
+.activitybar:hover,
+.activitybar:focus-within {
+  width: 232px;
+  margin-right: -186px;   /* 232 − 46: the dock root does not move */
+  box-shadow: 18px 0 46px rgba(0, 0, 0, .45);
+}
+
+.act-btn {
+  width: 100%;
+  max-width: 38px;      /* v17 · centered icon at rest; full row when open */
+  margin: 0 auto;
+  height: 38px;
+  /* NEW v15 · hardening: keep the target above the 24×24 px minimum of
+     WCAG 2.5.8 even if a future CSS change shrinks width/height — this is
+     what made the desktop Lighthouse run of v14 wobble on target-size */
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 0 11px;   /* v17 · the icon x-position is identical at rest and open */
+  color: var(--faint);
+  position: relative;
+  overflow: hidden;
+  /* a11y: keep the focus ring instant (outline excluded from transition) */
+  transition: color .15s, background-color .15s, max-width .34s cubic-bezier(.25, 1.45, .4, 1);
+}
+
+.activitybar:hover .act-btn,
+.activitybar:focus-within .act-btn {
+  max-width: none
+}
+
+/* ===== NEW v17 · the full name of the panel, revealed by the hover
+     expansion: collapsed to a 6px-slide ghost at rest, in place when the
+     bar is open. pointer-events none — the BUTTON stays the hit target. ===== */
+.act-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--dim);
+  opacity: 0;
+  transform: translateX(-8px);
+  pointer-events: none;
+  transition: opacity .16s ease, transform .3s cubic-bezier(.25, 1.45, .4, 1);
+}
+
+.activitybar:hover .act-label,
+.activitybar:focus-within .act-label {
+  opacity: 1;
+  transform: none
+}
+
+.act-btn:hover .act-label {
+  color: var(--text)
+}
+
+.act-btn.active .act-label {
+  color: var(--acc);
+  font-weight: 600
+}
+
+.act-btn:hover {
+  color: var(--text);
+  background: var(--panel2)
+}
+
+.act-btn.active {
+  color: var(--acc)
+}
+
+.act-btn.active::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 7px;
+  bottom: 7px;
+  width: 2.5px;
+  border-radius: 2px;
+  background: var(--acc)
+}
+
+.act-sep {
+  height: 1px;
+  width: 22px;
+  margin: 6px auto;
+  background: var(--border);
+  transition: width .34s cubic-bezier(.25, 1.45, .4, 1);
+}
+
+.activitybar:hover .act-sep,
+.activitybar:focus-within .act-sep {
+  width: calc(100% - 14px)
+}
+
+.act-spacer {
+  flex: 1
+}
+
+/* ---------- Dock tree ---------- */
+.dock-root {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  padding: 5px;
+  background: var(--bg)
+}
+
+.dk-split {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1
+}
+
+.dk-split.row {
+  flex-direction: row
+}
+
+.dk-split.col {
+  flex-direction: column
+}
+
+.dk-child {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 0 0 auto
+}
+
+.dk-gutter {
+  flex: 0 0 6px;
+  position: relative;
+  z-index: 3;
+  border-radius: 3px;
+  transition: background .12s
+}
+
+.dk-gutter::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 2px
+}
+
+.dk-split.row>.dk-gutter {
+  cursor: col-resize;
+  margin: 0 -1px
+}
+
+.dk-split.col>.dk-gutter {
+  cursor: row-resize;
+  margin: -1px 0
+}
+
+.dk-gutter:hover::after,
+.dk-gutter.active::after {
+  background: var(--acc)
+}
+
+.dk-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--rad);
+  overflow: hidden;
+  position: relative;
+  margin: 0 3px;
+}
+
+.dk-split.col>.dk-child>.dk-group {
+  margin: 3px 0
+}
+
+.dk-split.row>.dk-child>.dk-group {
+  margin: 0 3px
+}
+
+.dk-group.drag-over {
+  border-color: var(--acc-line);
+  box-shadow: 0 0 0 1px var(--acc-line)
+}
+
+.dk-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  background: #1e1f24;
+  padding: 5px 6px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: none;
+  scrollbar-width: none;
+}
+
+.dk-tabs::-webkit-scrollbar {
+  display: none
 }
 
 .dk-tab {
-  border-radius: 9px 9px 0 0
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px 7px;
+  border-radius: 7px 7px 0 0;
+  font-size: 0.75rem;
+  color: var(--dim);
+  white-space: nowrap;
+  cursor: grab;
+  user-select: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  position: relative;
+  touch-action: none;
+  max-width: 190px;
 }
 
-.tree-ch-head,
-.tree-ex {
-  border-radius: 9px
+.dk-tab svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  opacity: .75
 }
 
-.road-item {
-  border-radius: 8px
+.dk-tab .t-label {
+  overflow: hidden;
+  text-overflow: ellipsis
 }
 
-/* chip colorati: le tinte rgba scure diventano tinte chiare */
+.dk-tab:hover {
+  color: var(--text);
+  background: var(--panel2)
+}
+
+.dk-tab.active {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--border)
+}
+
+.dk-tab.active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--acc)
+}
+
+.dk-tab .t-close {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  line-height: 1;
+  color: var(--faint)
+}
+
+.dk-tab:hover .t-close {
+  display: flex
+}
+
+.dk-tab .t-close:hover {
+  background: var(--panel3);
+  color: var(--text)
+}
+
+.dk-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: var(--panel)
+}
+
+.dk-panel {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 14px
+}
+
+.dk-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--faint);
+  font-size: 0.8125rem
+}
+
+.dk-empty .big {
+  font-size: 1.625rem;
+  /* a11y: raised from .5 — at 26px the glyph is "large text" and needs 3:1 */
+  opacity: .7
+}
+
+body.dragging-tab {
+  cursor: grabbing !important;
+  user-select: none
+}
+
+body.dragging-tab * {
+  cursor: grabbing !important
+}
+
+.dk-ghost {
+  position: fixed;
+  z-index: 999;
+  pointer-events: none;
+  background: var(--panel2);
+  border: 1px solid var(--acc-line);
+  border-radius: 8px;
+  padding: 7px 13px;
+  font-size: 0.78125rem;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .55);
+  transform: rotate(-1deg);
+  opacity: .96;
+}
+
+.dk-ghost svg {
+  width: 13px;
+  height: 13px;
+  color: var(--acc)
+}
+
+/* zone di rilascio (ancoraggio) */
+.dk-drop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  gap: 5px;
+  padding: 5px;
+  pointer-events: none;
+  grid-template-areas: "t t t" "l c r" "b b b";
+  grid-template-rows: 1fr 1.4fr 1fr;
+  grid-template-columns: 1fr 1.4fr 1fr;
+}
+
+.dk-drop .z {
+  border-radius: 7px;
+  background: rgba(79, 156, 247, .06);
+  border: 1px dashed transparent;
+  transition: .1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65625rem;
+  color: transparent
+}
+
+.dk-drop .z.t {
+  grid-area: t
+}
+
+.dk-drop .z.l {
+  grid-area: l
+}
+
+.dk-drop .z.c {
+  grid-area: c
+}
+
+.dk-drop .z.r {
+  grid-area: r
+}
+
+.dk-drop .z.b {
+  grid-area: b
+}
+
+.dk-drop .z.on {
+  background: var(--acc-soft);
+  border-color: var(--acc);
+  color: var(--acc);
+  box-shadow: inset 0 0 24px rgba(79, 156, 247, .15)
+}
+
+.dk-drop .z.c.on {
+  font-size: 0.6875rem
+}
+
+/* ---------- Status bar ---------- */
+.statusbar {
+  height: 26px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 12px;
+  background: #131418;
+  border-top: 1px solid #26272d;
+  font-size: 0.71875rem;
+  color: var(--dim);
+  user-select: none;
+}
+
+.sb-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap
+}
+
+.sb-item svg {
+  width: 12px;
+  height: 12px
+}
+
+.sb-right {
+  margin-left: auto;
+  display: flex;
+  gap: 14px
+}
+
+.sb-chip {
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-weight: 600
+}
+
+.sb-chip.ok {
+  background: var(--ok-soft);
+  color: var(--ok)
+}
+
+.sb-chip.warn {
+  background: var(--warn-soft);
+  color: var(--warn)
+}
+
+.sb-chip.acc {
+  background: var(--acc-soft);
+  color: var(--acc)
+}
+
+/* ---------- Componenti comuni ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel2);
+  font-size: 0.78125rem;
+  font-weight: 500;
+  /* a11y: focus ring instant, hover still animated */
+  transition: color .15s, border-color .15s, background-color .15s;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: var(--panel3);
+  border-color: var(--border2)
+}
+
+.btn.primary {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: #0d1521;
+  font-weight: 650
+}
+
+.btn.primary:hover {
+  background: #6dadff
+}
+
+.btn.ghost {
+  background: transparent
+}
+
+.btn.danger {
+  color: var(--err);
+  border-color: rgba(241, 106, 106, .4)
+}
+
+.btn:disabled {
+  opacity: .45;
+  cursor: not-allowed
+}
+
+.btn svg {
+  width: 14px;
+  height: 14px
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 11px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: var(--panel3);
+  color: var(--dim);
+  white-space: nowrap
+}
+
+.chip.acc {
+  background: var(--acc-soft);
+  color: var(--acc)
+}
+
+.chip.ok {
+  background: var(--ok-soft);
+  color: var(--ok)
+}
+
+.chip.warn {
+  background: var(--warn-soft);
+  color: var(--warn)
+}
+
 .chip.purple {
-  background: rgba(124, 58, 237, .10)
+  background: rgba(195, 151, 245, .14);
+  color: var(--purple)
 }
 
 .chip.cy {
-  background: rgba(14, 116, 144, .10)
+  background: rgba(111, 211, 231, .13);
+  color: var(--cyan)
 }
 
-.sb-chip.pkg {
-  background: rgba(14, 116, 144, .10)
+.muted {
+  color: var(--dim)
 }
 
-/* ---------- 5 · exercise: statement, passi, hint ---------- */
+.hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 12px 0
+}
+
+h2.pan-title {
+  font-size: 0.9375rem;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 4px
+}
+
+.pan-sub {
+  font-size: 0.75rem;
+  color: var(--faint);
+  margin-bottom: 14px
+}
+
+details>summary {
+  cursor: pointer;
+  list-style: none
+}
+
+details>summary::-webkit-details-marker {
+  display: none
+}
+
+/* ---------- Modules tree ---------- */
+.tree {
+  display: flex;
+  flex-direction: column;
+  gap: 1px
+}
+
+.tree-ch {
+  margin-bottom: 6px
+}
+
+.tree-ch-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  width: 100%;
+  font-size: 0.78125rem;
+  font-weight: 650;
+  color: var(--text);
+  /* a11y: focus ring instant, hover still animated */
+  transition: color .12s, background-color .12s;
+  text-align: left;
+}
+
+.tree-ch-head:hover {
+  background: var(--panel2)
+}
+
+.tree-ch-head .chev {
+  transition: .15s;
+  color: var(--faint);
+  font-size: 0.625rem
+}
+
+.tree-ch.open .tree-ch-head .chev {
+  transform: rotate(90deg)
+}
+
+.tree-ch-head .cnt {
+  margin-left: auto;
+  font-size: 0.65625rem;
+  color: var(--faint);
+  font-weight: 600
+}
+
+.tree-ch-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--panel3);
+  margin: 2px 8px 4px;
+  overflow: hidden
+}
+
+.tree-ch-bar i {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+  border-radius: 2px;
+  transition: width .3s
+}
+
+.tree-ex {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5.5px 8px 5.5px 24px;
+  border-radius: 7px;
+  font-size: 0.76875rem;
+  color: var(--dim);
+  text-align: left;
+  /* a11y: focus ring instant, hover/current still animated */
+  transition: color .12s, background-color .12s, box-shadow .12s;
+}
+
+.tree-ex:hover {
+  background: var(--panel2);
+  color: var(--text)
+}
+
+.tree-ex.current {
+  background: var(--acc-soft);
+  color: var(--text);
+  box-shadow: inset 2px 0 0 var(--acc)
+}
+
+.tree-ex .st {
+  width: 14px;
+  text-align: center;
+  flex: none;
+  font-size: 0.6875rem
+}
+
+.tree-ex .st.todo {
+  color: var(--faint)
+}
+
+.tree-ex .st.prog {
+  color: var(--acc)
+}
+
+.tree-ex .st.done {
+  color: var(--ok)
+}
+
+.tree-ex .id {
+  font-family: var(--mono);
+  font-size: 0.65625rem;
+  background: var(--panel3);
+  padding: 1px 5px;
+  border-radius: 5px;
+  color: var(--faint);
+  flex: none
+}
+
+.tree-ex .tt {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+.tree-ex .dots {
+  flex: none;
+  letter-spacing: 1.5px;
+  font-size: 0.5rem;
+  color: var(--warn)
+}
+
+.tree-roadmap {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 9px
+}
+
+/* a11y: heading level fixed — the roadmap title is now an h3 (it sat at
+   h4 directly under the h2 of the panel, skipping one level) */
+.tree-roadmap h3 {
+  font-size: 0.71875rem;
+  color: var(--faint);
+  font-weight: 650;
+  margin: 0 0 7px;
+  text-transform: uppercase;
+  letter-spacing: .6px
+}
+
+.road-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--faint);
+  text-align: left;
+}
+
+.road-item:hover {
+  background: var(--panel2);
+  color: var(--dim)
+}
+
+.road-item .lock {
+  font-size: 0.6875rem
+}
+
+.road-item .cnt {
+  margin-left: auto;
+  font-size: 0.625rem
+}
+
+/* ---------- Exercise panel ---------- */
+.ex-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 860px
+}
+
+.ex-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px
+}
+
+.ex-head h1 {
+  font-size: 1.09375rem;
+  font-weight: 700;
+  letter-spacing: .1px
+}
+
+.ex-head .orig {
+  font-size: 0.71875rem;
+  color: var(--faint);
+  font-style: italic
+}
+
+.ex-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center
+}
+
+.ex-progress {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-wrap: wrap
+}
+
+.ex-progress .p-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--panel3);
+  border: 1px solid var(--border2);
+  transition: .2s
+}
+
+.ex-progress .p-dot.done {
+  background: var(--ok);
+  border-color: var(--ok)
+}
+
+.ex-progress .p-dot.cur {
+  background: var(--acc);
+  border-color: var(--acc);
+  animation: pulse 1.6s infinite
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(79, 156, 247, .5)
+  }
+
+  55% {
+    box-shadow: 0 0 0 5px rgba(79, 156, 247, 0)
+  }
+}
+
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.6875rem;
+  color: var(--dim)
+}
+
+.meter .bar {
+  width: 74px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--panel3);
+  overflow: hidden
+}
+
+.meter .bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--ok), #7ee0a3);
+  border-radius: 3px;
+  transition: width .35s
+}
+
+.ex-statement {
+  border: 1px solid var(--border);
+  border-radius: var(--rad);
+  background: var(--bg2);
+  overflow: hidden;
+}
+
+.ex-statement summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  font-size: 0.78125rem;
+  font-weight: 600;
+  color: var(--dim)
+}
+
+.ex-statement summary:hover {
+  color: var(--text)
+}
+
+.ex-statement .body {
+  padding: 2px 15px 14px;
+  font-size: 0.825rem;
+  line-height: 1.62;
+  color: var(--text)
+}
+
+.ex-statement .body ul {
+  margin: 7px 0 4px 18px
+}
+
+.ex-statement .body li {
+  margin-bottom: 4px
+}
+
+.ex-statement .body code {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  background: var(--panel3);
+  padding: 1px 5px;
+  border-radius: 5px;
+  color: var(--yellow)
+}
+
+/* ===== NEW v16.2 · chapter concepts inside the Exercise statement: they
+   moved here from the removed Walkthrough panel, so the Exercise tab is
+   self-contained (statement + concepts + steps). ===== */
+.ex-statement .concepts {
+  margin-top: 4px;
+  padding: 0 15px 14px
+}
+
+.ex-statement .concepts .concepts-lbl {
+  font-size: 0.65625rem;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--faint);
+  align-self: center;
+  margin-right: 2px
+}
+
+/* passi */
+.step-done {
+  border: 1px solid var(--border);
+  border-radius: var(--rad);
+  background: var(--bg2);
+  overflow: hidden
+}
+
+.step-done summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px;
+  font-size: 0.78125rem;
+  color: var(--dim)
+}
+
+.step-done summary .n {
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--ok-soft);
+  color: var(--ok);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65625rem;
+  font-weight: 700;
+  flex: none;
+}
+
+.step-done summary .ph {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+.step-done pre {
+  margin: 0 12px 10px;
+  padding: 10px 12px;
+  background: #141519;
+  border-radius: 7px;
+  overflow: auto
+}
+
+.step-done.just-ok {
+  animation: flash-ok .8s
+}
+
+@keyframes flash-ok {
+  0% {
+    border-color: var(--ok);
+    box-shadow: 0 0 0 3px rgba(76, 195, 138, .25)
+  }
+
+  100% {}
+}
+
 .step-cur {
-  box-shadow: 0 4px 18px rgba(23, 32, 54, .10)
+  border: 1px solid var(--border2);
+  border-left: 3px solid var(--acc);
+  border-radius: var(--rad);
+  background: var(--panel2);
+  padding: 14px 15px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .25);
+}
+
+.sc-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 9px;
+  flex-wrap: wrap
+}
+
+.sc-top .passo {
+  font-size: 0.65625rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--acc);
+  text-transform: uppercase
+}
+
+.phrase {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  margin-bottom: 11px
+}
+
+.phrase .n {
+  color: var(--acc);
+  font-family: var(--mono);
+  font-weight: 700
+}
+
+.kw {
+  color: var(--acc);
+  border-bottom: 2px dotted var(--acc-line);
+  cursor: pointer;
+  padding: 0 1px;
+  border-radius: 2px;
+  /* a11y: focus ring instant, hover wash still animated */
+  transition: color .12s, border-bottom-color .12s, background-color .12s;
+  font-weight: 600;
 }
 
 .kw:hover {
-  background: rgba(37, 99, 235, .08)
-}
-
-.hint-card {
-  border-color: rgba(124, 58, 237, .30);
-  border-radius: 12px;
-  background: rgba(124, 58, 237, .06)
-}
-
-.hint-card .hint-cta {
-  border-color: rgba(124, 58, 237, .30);
-  border-radius: 9px
-}
-
-.hint-card .hint-cta:hover {
-  background: rgba(124, 58, 237, .12)
+  /* a11y: 8% wash instead of --acc-soft (14%) so the blue keyword text
+     keeps 4.5:1 against its own hover background */
+  background: rgba(79, 156, 247, .08)
 }
 
 .kw.used {
-  border-bottom-color: rgba(124, 58, 237, .5)
+  color: var(--purple);
+  border-bottom-color: rgba(195, 151, 245, .5)
 }
 
-.note {
-  border-radius: 0 10px 10px 0
+.kw.used::after {
+  content: " ✓";
+  font-size: 0.625rem;
+  color: var(--purple)
 }
 
-/* ---------- 6 · editor e aree di input (chiarissime) ---------- */
-.code-area {
-  background: #ffffff;
-  border-radius: 13px
+.hint-card {
+  border: 1px solid rgba(195, 151, 245, .35);
+  background: rgba(195, 151, 245, .07);
+  border-radius: 9px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  animation: hint-in .25s;
 }
 
-.cl .ln {
-  color: #98a2b3
+@keyframes hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px)
+  }
+
+  to {}
 }
 
-.cl .cd {
-  color: #1f2733
+.hint-card .hc-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 5px
 }
 
-.code-input {
-  color: #1f2733
+.hint-card .hc-top b {
+  font-size: 0.75rem;
+  color: var(--purple)
 }
 
-.reflect-box textarea {
-  background: #ffffff;
-  border-radius: 12px
+.hint-card .hc-top .lv {
+  font-size: 0.625rem;
+  color: var(--faint)
 }
 
-.field input {
-  background: #ffffff;
-  border-radius: 9px
+.hint-card p {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text)
 }
 
-.input-modal-field {
-  background: #ffffff;
-  border-radius: 9px
-}
-
-.codice-ta {
-  background: #ffffff;
-  color: #1f2733;
-  border-radius: 13px
-}
-
-.sandbox-ta {
-  background: #ffffff;
-  color: #1f2733;
-  border-radius: 13px
-}
-
-.sandbox-samples button {
-  border-radius: 13px
-}
-
-.codice-tabs button {
-  border-radius: 9px
-}
-
-/* blocchi di codice dentro passi completati e hint */
-.step-done pre {
-  background: #f6f8fb;
-  border-radius: 9px
-}
-
-.ex-final pre {
-  background: #f6f8fb;
-  border-radius: 10px
+.hint-card .lvl2 {
+  margin-top: 7px
 }
 
 .hint-card code.syn {
-  background: #faf5ff;
-  border-radius: 9px;
-  color: #6b21a8
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.76875rem;
+  background: #141519;
+  border-radius: 7px;
+  padding: 8px 11px;
+  margin-top: 7px;
+  color: #d8b8ff;
+  white-space: pre-wrap;
+  animation: hint-in .25s;
 }
 
-/* sintassi Python su fondo chiaro */
-.py-k { color: #a626a4 }
-.py-s { color: #50a14f }
-.py-c { color: #697586 }
-.py-n { color: #986801 }
-.py-b { color: #0184bc }
-.py-f { color: #3568c9 }
+.hint-card .hint-cta {
+  margin-top: 8px;
+  font-size: 0.71875rem;
+  color: var(--purple);
+  border: 1px solid rgba(195, 151, 245, .35);
+  border-radius: 7px;
+  padding: 4px 10px
+}
 
-/* ---------- 7 · console / terminale: resta scuro (è un terminale) ---------- */
+.hint-card .hint-cta:hover {
+  background: rgba(195, 151, 245, .12)
+}
+
+.assist-line {
+  font-size: 0.6875rem;
+  color: var(--faint);
+  display: flex;
+  gap: 6px;
+  align-items: center
+}
+
+.note {
+  font-size: 0.75rem;
+  color: var(--dim);
+  background: var(--warn-soft);
+  border-left: 3px solid var(--warn);
+  padding: 8px 11px;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 10px;
+  line-height: 1.55
+}
+
+/* a11y · code inside .note gets the same chip styling (and contrast) as
+   every other inline code chip in the app */
+.note code {
+  font-family: var(--mono);
+  font-size: 0.71875rem;
+  background: var(--panel3);
+  padding: 1px 5px;
+  border-radius: 5px;
+  color: var(--yellow)
+}
+
+/* line-by-line editor */
+.code-area {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #141519;
+  overflow: hidden
+}
+
+/* a11y · SC 2.4.7: the code editor textarea has outline:none, so the focus
+   ring is drawn on its container, like every other editor field */
+.code-area:focus-within {
+  border-color: var(--acc-line);
+  box-shadow: 0 0 0 2px rgba(79, 156, 247, .16)
+}
+
+.code-sofar {
+  padding: 9px 0;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  line-height: 1.75;
+  max-height: 210px;
+  overflow: auto
+}
+
+.cl {
+  display: flex;
+  gap: 0;
+  white-space: pre
+}
+
+.cl .ln {
+  width: 34px;
+  flex: none;
+  text-align: right;
+  padding-right: 11px;
+  color: #838a98;
+  user-select: none;
+  font-size: 0.6875rem;
+  line-height: inherit
+}
+
+.cl .cd {
+  flex: 1;
+  color: #d4d7dd;
+  overflow: hidden
+}
+
+.cl.active-line {
+  background: rgba(79, 156, 247, .07)
+}
+
+.code-input-row {
+  display: flex;
+  border-top: 1px solid var(--border);
+  align-items: stretch
+}
+
+.code-input-row .ln {
+  width: 34px;
+  flex: none;
+  text-align: right;
+  padding: 10px 11px 0 0;
+  color: var(--acc);
+  font-family: var(--mono);
+  font-size: 0.6875rem
+}
+
+.code-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  /* ===== CHANGED v18 · BIGGER writing zone in the Exercise tab: 14px mono
+     (like the ⌨ Code editor), 1.7 line height and a 132px minimum —
+     armAutogrow() in app.js keeps growing it with the typed lines. ===== */
+  padding: 12px 12px;
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: #e8eaf0;
+  min-height: 132px;
+}
+
+.code-input::placeholder {
+  color: var(--faint)
+}
+
+.code-input.err {
+  background: var(--err-soft);
+  animation: shake .3s
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0)
+  }
+
+  25% {
+    transform: translateX(-4px)
+  }
+
+  75% {
+    transform: translateX(4px)
+  }
+}
+
+.code-input.ok {
+  background: var(--ok-soft)
+}
+
+.step-actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 11px;
+  flex-wrap: wrap;
+  align-items: center
+}
+
+.step-msg {
+  font-size: 0.75rem;
+  margin-top: 8px
+}
+
+.step-msg.err {
+  color: var(--err)
+}
+
+.step-msg.ok {
+  color: var(--ok)
+}
+
+.reflect-box {
+  width: 100%;
+  margin-top: 4px
+}
+
+.reflect-box textarea {
+  width: 100%;
+  background: #141519;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  /* ===== CHANGED v18 · more room for the written answer too (grows with
+     the text — see armAutogrow in stepCard). ===== */
+  min-height: 96px;
+  resize: vertical;
+  outline: none;
+  font-family: var(--ui);
+}
+
+.reflect-box textarea:focus {
+  border-color: var(--acc-line)
+}
+
+/* colori python */
+.py-k {
+  color: #c586e0
+}
+
+.py-s {
+  color: #ce9178
+}
+
+.py-c {
+  color: #6d9377;
+  font-style: italic
+}
+
+.py-n {
+  color: #b5cea8
+}
+
+.py-b {
+  color: #dcdcaa
+}
+
+.py-f {
+  color: #4fc7ff
+}
+
+/* completamento */
+.ex-final {
+  border: 1px solid rgba(76, 195, 138, .4);
+  background: var(--ok-soft);
+  border-radius: var(--rad);
+  padding: 16px
+}
+
+.ex-final h3 {
+  font-size: 0.9375rem;
+  color: var(--ok);
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  margin-bottom: 8px
+}
+
+.ex-final pre {
+  background: #141519;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: var(--mono);
+  font-size: 0.78125rem;
+  overflow: auto;
+  margin: 9px 0
+}
+
+.ex-final .score {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 10px 0
+}
+
+.upcoming {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--faint);
+  font-size: 0.75rem;
+  padding: 8px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 9px
+}
+
+/* ---------- Console ---------- */
 .console-box {
-  background: #1c2230;
-  border-radius: 13px
+  background: #101216;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 150px
 }
 
 .console-head {
-  background: #232b3b
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 11px;
+  border-bottom: 1px solid var(--border);
+  background: #15171b;
+  font-size: 0.6875rem;
+  color: var(--dim);
+  flex: none
 }
 
-.codice-out {
-  background: #1c2230;
-  border-radius: 13px
+.console-head .t {
+  font-family: var(--mono)
 }
 
-.console-out .run-block {
-  border-bottom-color: rgba(255, 255, 255, .10)
+.console-head .btn-cl {
+  margin-left: auto;
+  font-size: 0.6875rem;
+  color: var(--faint);
+  padding: 2px 7px;
+  border-radius: 5px
 }
 
-.console-out .sim-out {
-  color: #a8b3c7
+.console-head .btn-cl:hover {
+  color: var(--text);
+  background: var(--panel3)
 }
 
-.console-out details.run-tb summary,
-.console-out details.run-tb summary::before {
-  color: #c99b6e
+.console-out {
+  flex: 1;
+  overflow: auto;
+  padding: 10px 12px;
+  font-family: var(--mono);
+  font-size: 0.76875rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word
 }
 
-.console-out details.run-tb pre {
-  color: #d3999b
+.console-out .line-cmd {
+  color: #6fd3e7
 }
 
-#sbOut {
-  background: #1c2230 !important
+.console-out .line-out {
+  color: #cfd2d9
 }
 
-/* ---------- 8 · grafici ---------- */
-.graph-card {
-  background: #ffffff;
-  border-radius: 12px
+.console-out .line-err {
+  color: var(--err)
 }
 
-.graph-card-head {
-  background: #f4f6fa
+.console-out .line-dim {
+  color: var(--faint)
 }
 
-.graph-card-body {
-  border-radius: 0 0 12px 12px
+.console-out .cursor {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  background: var(--acc);
+  animation: blink 1s steps(1) infinite;
+  vertical-align: -2px
 }
 
-.graph-close {
-  border-radius: 7px
-}
-
-.graph-close:hover {
-  border-color: #d1242f;
-  background: rgba(209, 36, 47, .08);
-  color: #d1242f
-}
-
-.plotly-err {
-  background: #ffffff
-}
-
-/* in full screen la scrim resta scura (vedi styles.css): ok in entrambi
-   i temi — le pillole glassy sono pensate per stare sopra la scrim */
-
-/* ---------- 9 · gioco: pad chiaro, stage e full screen restano scuri ---------- */
-.game-canvas {
-  border-radius: 10px
-}
-
-.game-pad {
-  background: linear-gradient(#ffffff, #eef1f7)
-}
-
-.gp {
-  border-radius: 18px;
-  background: linear-gradient(#ffffff, #e9edf4);
-  border-color: #c3cddb;
-  box-shadow: 0 3px 0 #b9c2d2;
-  color: #232a36
-}
-
-.gp-fire {
-  border-radius: 20px;
-  background: linear-gradient(#dbeafe, #bfd9f8);
-  border-color: #93b8ec;
-  color: #1e4fbb
-}
-
-.gp-q {
-  border-radius: 16px
-}
-
-/* ---------- 10 · drawer, overlay, modali, toast, menu mobile ---------- */
-.drawer {
-  box-shadow: 24px 0 70px rgba(23, 32, 54, .25);
-  border-radius: 0 22px 22px 0
-}
-
-.drawer-search input {
-  background: #ffffff;
-  border-radius: 10px
-}
-
-.drawer-x {
-  border-radius: 10px
-}
-
-.drawer-bg {
-  background: rgba(15, 23, 42, .42)
-}
-
-.ovl {
-  border-radius: 18px;
-  box-shadow: 0 30px 90px rgba(15, 23, 42, .30)
-}
-
-.ovl-bg {
-  background: rgba(15, 23, 42, .45)
-}
-
-.ovl-x {
-  border-radius: 10px
-}
-
-.modal {
-  border-radius: 18px;
-  box-shadow: 0 24px 70px rgba(15, 23, 42, .28)
-}
-
-.modal-bg {
-  background: rgba(15, 23, 42, .45)
-}
-
-.toast {
-  border-radius: 12px;
-  box-shadow: 0 10px 34px rgba(15, 23, 42, .22)
-}
-
-.m-more-menu {
-  border-radius: 14px;
-  box-shadow: 0 18px 50px rgba(15, 23, 42, .22)
-}
-
-.m-nav button {
-  border-radius: 12px
-}
-
-/* mobile: i fogli (guide overlay, modali) arrotondano solo in alto */
-@media (max-width:768px) {
-  .modal {
-    border-radius: 18px 18px 0 0
-  }
-
-  .ovl {
-    border-radius: 18px 18px 0 0
-  }
-
-  .drawer {
-    border-radius: 0 22px 22px 0
+@keyframes blink {
+  50% {
+    opacity: 0
   }
 }
 
-/* ---------- 11 · dettagli ---------- */
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, .45) }
-  55% { box-shadow: 0 0 0 5px rgba(37, 99, 235, 0) }
+.console-empty {
+  color: var(--faint);
+  font-size: 0.75rem;
+  font-style: italic
+}
+
+/* ---------- Traccia / Guida / Progressi ---------- */
+.guide-sec {
+  border: 1px solid var(--border);
+  border-radius: var(--rad);
+  background: var(--bg2);
+  padding: 13px 15px;
+  margin-bottom: 11px
+}
+
+.guide-sec h3 {
+  font-size: 0.84375rem;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  color: var(--text)
+}
+
+.guide-sec p {
+  font-size: 0.8rem;
+  line-height: 1.65;
+  color: var(--dim);
+  margin-bottom: 6px
+}
+
+.guide-sec p b {
+  color: var(--text)
+}
+
+.guide-sec ul {
+  margin: 4px 0 6px 18px
+}
+
+.guide-sec li {
+  font-size: 0.7875rem;
+  color: var(--dim);
+  line-height: 1.6;
+  margin-bottom: 3px
+}
+
+.guide-sec code {
+  font-family: var(--mono);
+  font-size: 0.7375rem;
+  background: var(--panel3);
+  padding: 1px 5px;
+  border-radius: 5px;
+  color: var(--yellow)
+}
+
+.guide-sec .kbd {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  border: 1px solid var(--border2);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 0 6px;
+  background: var(--panel3);
+  color: var(--text)
+}
+
+.zone-map {
+  display: grid;
+  grid-template-areas: "t t t" "l c r" "b b b";
+  grid-template-rows: 22px 30px 22px;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 4px;
+  margin: 8px 0 2px;
+  max-width: 230px
+}
+
+.zone-map i {
+  border: 1px dashed var(--acc-line);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.5625rem;
+  color: var(--acc);
+  font-style: normal
+}
+
+.zone-map i.t {
+  grid-area: t
+}
+
+.zone-map i.l {
+  grid-area: l
+}
+
+.zone-map i.c {
+  grid-area: c
+}
+
+.zone-map i.r {
+  grid-area: r
+}
+
+.zone-map i.b {
+  grid-area: b
+}
+
+.tr-body {
+  font-size: 0.825rem;
+  line-height: 1.68;
+  color: var(--text)
+}
+
+.tr-body ul {
+  margin: 8px 0 8px 18px
+}
+
+.tr-body li {
+  margin-bottom: 5px
+}
+
+/* a11y · module 6 (checklist 45-75 characters per line): long-form reading
+   blocks keep a comfortable measure even when the dock panel is dragged wide.
+   max-width only caps; on narrow panels the text fills the panel as before. */
+.ex-statement .body p,
+.ex-statement .body ul,
+.guide-sec p,
+.guide-sec ul,
+.tr-body,
+.tr-body ul,
+.phrase {
+  max-width: 72ch
+}
+
+.tr-body code {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  background: var(--panel3);
+  padding: 1px 5px;
+  border-radius: 5px;
+  color: var(--yellow)
+}
+
+.concepts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px
+}
+
+.stat-card {
+  border: 1px solid var(--border);
+  border-radius: var(--rad);
+  background: var(--bg2);
+  padding: 12px
+}
+
+.stat-card .v {
+  font-size: 1.375rem;
+  font-weight: 750;
+  letter-spacing: -.5px
+}
+
+.stat-card .l {
+  font-size: 0.6875rem;
+  color: var(--faint);
+  margin-top: 2px
+}
+
+.ch-prog {
+  margin-bottom: 10px
+}
+
+.ch-prog .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  margin-bottom: 4px
+}
+
+.ch-prog .bar {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--panel3);
+  overflow: hidden
+}
+
+.ch-prog .bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--acc), #7ee0a3);
+  border-radius: 4px;
+  transition: width .4s
+}
+
+.ass-legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.6875rem;
+  color: var(--dim)
+}
+
+.ass-legend b {
+  font-weight: 700
+}
+
+.ass-legend .l1 {
+  color: var(--cyan)
+}
+
+.ass-legend .l2 {
+  color: var(--purple)
+}
+
+.ass-legend .l3 {
+  color: var(--warn)
+}
+
+.tbl-ex {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76875rem
+}
+
+.tbl-ex th {
+  text-align: left;
+  color: var(--faint);
+  font-weight: 600;
+  font-size: 0.6875rem;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border)
 }
 
 .tbl-ex td {
-  border-bottom-color: rgba(216, 223, 233, .9)
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(51, 53, 61, .5)
 }
 
+.tbl-ex tr:last-child td {
+  border-bottom: none
+}
+
+/* ---------- Toast / Modal ---------- */
+#toasts {
+  position: fixed;
+  bottom: 44px;
+  right: 16px;
+  /* ===== NEW v15 · CLS: the box height is RESERVED (~3 stacked toasts)
+     and toasts stack from the bottom: adding/removing one no longer
+     grows the container and shifts the layout (the trace showed a 0.02
+     shift right after the first render). The empty container paints
+     nothing, so this costs no pixels. ===== */
+  height: 150px;
+  justify-content: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1200;
+  pointer-events: none
+}
+
+.toast {
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  border-left: 3px solid var(--acc);
+  border-radius: 9px;
+  padding: 10px 14px;
+  font-size: 0.78125rem;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .5);
+  max-width: 330px;
+  animation: toast-in .25s;
+  flex-shrink: 0;   /* NEW v15 · never squeeze a toast inside the reserved space */
+}
+
+.toast.ok {
+  border-left-color: var(--ok)
+}
+
+.toast.warn {
+  border-left-color: var(--warn)
+}
+
+.toast.err {
+  border-left-color: var(--err)
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px)
+  }
+
+  to {}
+}
+
+.toast.out {
+  opacity: 0;
+  transform: translateX(14px);
+  transition: .3s
+}
+
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 9, 12, .62);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: hint-in .18s
+}
+
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 13px;
+  padding: 19px 20px;
+  max-width: 430px;
+  width: 100%;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .6)
+}
+
+.modal h3 {
+  font-size: 0.9375rem;
+  margin-bottom: 9px
+}
+
+.modal p {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--dim);
+  margin-bottom: 14px
+}
+
+.modal .acts {
+  display: flex;
+  gap: 9px;
+  justify-content: flex-end
+}
+
+/* ---------- Mobile view ---------- */
+#mobileView {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0
+}
+
+body.mobile #mobileView {
+  display: flex
+}
+
+body.mobile .workbench,
+body.mobile .statusbar,
+body.mobile .titlebar {
+  display: none
+}
+
+/* ===== CHANGED v16.1 · fixed height: the drawer slides UNDER this bar
+   (it must stay visible and clickable — ☰ toggles the drawer closed),
+   so its offset needs a predictable value (see .drawer in the mobile
+   media query). ===== */
+.m-head {
+  flex: none;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  background: #131418;
+  border-bottom: 1px solid #26272d;
+  user-select: none;
+  position: relative;   /* v16.1 · stays above the drawer */
+  z-index: 1002;
+  transition: margin-top .26s ease, opacity .26s ease
+}
+
+.m-head .m-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.875rem
+}
+
+.m-head .m-brand svg {
+  width: 18px;
+  height: 18px
+}
+
+.m-head .m-ex {
+  flex: 1;
+  min-width: 0;
+  text-align: right
+}
+
+.m-head .m-ex .t {
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.m-head .m-ex .s {
+  font-size: 0.65625rem;
+  color: var(--faint)
+}
+
+.m-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch
+}
+
+.m-panel {
+  padding: 13px;
+  max-width: none
+}
+
+.m-nav {
+  flex: none;
+  display: flex;
+  background: #131418;
+  border-top: 1px solid #26272d;
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  gap: 2px;
+}
+
+.m-nav button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border-radius: 9px;
+  font-size: 0.625rem;
+  color: var(--faint);
+  min-height: 48px;
+  justify-content: center;
+}
+
+.m-nav button svg {
+  width: 19px;
+  height: 19px
+}
+
+.m-nav button.active {
+  color: var(--acc);
+  background: var(--acc-soft)
+}
+
+body.mobile .ex-wrap {
+  max-width: none
+}
+
+body.mobile .step-cur {
+  padding: 12px 12px
+}
+
+body.mobile .phrase {
+  font-size: 0.875rem
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width:1100px) {
+  .brand .sub {
+    display: none
+  }
+
+  .tl-center {
+    display: none
+  }
+
+  .dk-panel {
+    padding: 11px
+  }
+
+  .dk-group {
+    min-width: 130px;
+    min-height: 110px
+  }
+
+  .tree-ex {
+    padding: 5px 6px 5px 18px;
+    gap: 6px
+  }
+
+  .tree-ex .dots {
+    display: none
+  }
+
+  .tree-ex .id {
+    font-size: 0.59375rem;
+    padding: 1px 4px
+  }
+
+  .tree-ch-head {
+    font-size: 0.75rem
+  }
+}
+
+@media (max-width:768px) {
+
+  /* a11y: only the body base shrinks; the html root (rem scale) is never
+     overridden, so the user's browser font-size preference keeps scaling
+     every rem-based size in the app */
+  body {
+    font-size: 0.84375rem
+  }
+
+  #toasts {
+    left: 12px;
+    right: 12px;
+    bottom: 76px;
+    align-items: center
+  }
+
+  .toast {
+    max-width: none;
+    width: 100%
+  }
+}
+
+/* ---------- Esecuzione reale (Pyodide) — NUOVO ---------- */
+.ex-actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 4px 0 2px
+}
+
+.ex-actions .rt-note {
+  font-size: 0.6875rem;
+  color: var(--faint)
+}
+
+.console-out .run-block {
+  margin-bottom: 13px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(51, 53, 61, .5)
+}
+
+/* ===== NEW · official solution block (double execution) ===== */
 .console-out .run-block.sol {
-  border-left-color: #8b5cf6;
-  background: rgba(139, 92, 246, .07)
+  border-left: 2px solid var(--purple, #b48cff);
+  padding-left: 9px;
+  background: rgba(180, 140, 255, .05);
+  border-radius: 0 6px 6px 0
 }
 
-/* ---------- 12 · alto contrasto (preferenza OS) in versione chiara ---------- */
+.console-out .run-cmd.sol {
+  color: #b48cff
+}
+
+.console-out .run-cmd {
+  color: #6fd3e7
+}
+
+.console-out .run-meta {
+  color: var(--faint);
+  font-size: 0.65625rem;
+  display: block;
+  margin: 2px 0 4px
+}
+
+.console-out .run-out {
+  color: #cfd2d9
+}
+
+.console-out .run-err {
+  color: var(--err);
+  white-space: pre-wrap
+}
+
+.console-out .run-hint {
+  color: var(--warn);
+  display: block;
+  margin-top: 4px;
+  font-size: 0.7375rem;
+  border-left: 2px solid var(--warn);
+  padding-left: 8px
+}
+
+.console-out .run-ok {
+  color: var(--ok);
+  font-size: 0.6875rem
+}
+
+.console-out details.run-tb {
+  margin-top: 5px
+}
+
+.console-out details.run-tb summary {
+  color: #a3866c;
+  font-size: 0.65625rem;
+  cursor: pointer;
+  list-style: none
+}
+
+.console-out details.run-tb summary::before {
+  content: "▸ ";
+  color: #a3866c
+}
+
+.console-out details.run-tb[open] summary::before {
+  content: "▾ "
+}
+
+.console-out details.run-tb pre {
+  margin: 5px 0 0;
+  color: #b98484;
+  font-size: 0.70625rem;
+  white-space: pre-wrap
+}
+
+.console-out .sim-out {
+  color: #8d94a5
+}
+
+.console-out .sim-tag {
+  font-size: 0.625rem;
+  color: var(--warn);
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 3px
+}
+
+.sb-chip.busy {
+  background: rgba(229, 192, 117, .14);
+  color: var(--warn)
+}
+
+.sb-chip.err {
+  background: var(--err-soft);
+  color: var(--err)
+}
+
+.sb-chip .spin {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgba(79, 156, 247, .25);
+  border-top-color: var(--acc);
+  border-radius: 50%;
+  animation: spin .9s linear infinite;
+  vertical-align: -1px
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg)
+  }
+}
+
+.py-hint-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.6875rem;
+  color: var(--faint)
+}
+
+/* ---------- Sandbox — NUOVO ---------- */
+/* ===== CHANGED v17 · height:100% → min-height:100%: the wrap can now
+     GROW beyond the panel (the code zone is as tall as its content) and
+     the panel itself scrolls. ===== */
+.sandbox-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 100%
+}
+
+/* ===== CHANGED v17 · WIDER writing zone: bigger type (14px), taller
+     minimum (240px) and flex-basis auto — armAutogrow() in app.js sizes
+     the textarea to its content, so the whole program stays visible and
+     the panel scrollbar takes over when it does not fit. ===== */
+.sandbox-ta {
+  width: 100%;
+  flex: 1 0 auto;
+  min-height: 240px;
+  background: #141519;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 13px 15px;
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  line-height: 1.75;
+  color: #e8eaf0;
+  resize: vertical;
+  outline: none;
+  white-space: pre;
+  overflow: auto;
+}
+
+.sandbox-ta:focus {
+  border-color: var(--acc-line)
+}
+
+.sandbox-samples {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap
+}
+
+.sandbox-samples button {
+  font-size: 0.6875rem;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  color: var(--dim);
+  background: var(--bg2)
+}
+
+.sandbox-samples button:hover {
+  color: var(--acc);
+  border-color: var(--acc-line)
+}
+
+/* ---------- Account / sync — NUOVO ---------- */
+.auth-card {
+  border: 1px solid var(--border);
+  border-radius: var(--rad);
+  background: var(--bg2);
+  padding: 14px 15px;
+  margin-bottom: 12px
+}
+
+.auth-card h3 {
+  font-size: 0.84375rem;
+  margin-bottom: 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px
+}
+
+.auth-grid {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 1fr 1fr
+}
+
+@media (max-width:520px) {
+  .auth-grid {
+    grid-template-columns: 1fr
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px
+}
+
+.field label {
+  font-size: 0.6875rem;
+  color: var(--faint)
+}
+
+.field input {
+  background: #141519;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-size: 0.8125rem;
+  color: var(--text);
+  outline: none;
+  width: 100%;
+}
+
+.field input:focus {
+  border-color: var(--acc-line)
+}
+
+.auth-msg {
+  font-size: 0.75rem;
+  margin-top: 9px;
+  min-height: 16px
+}
+
+.auth-msg.err {
+  color: var(--err)
+}
+
+.auth-msg.ok {
+  color: var(--ok)
+}
+
+.sync-banner {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-size: 0.76875rem;
+  margin-bottom: 12px
+}
+
+.sync-banner.off {
+  background: var(--warn-soft);
+  border: 1px solid rgba(229, 192, 117, .3)
+}
+
+.sync-banner.on {
+  background: var(--ok-soft);
+  border: 1px solid rgba(76, 195, 138, .3)
+}
+
+.sync-banner.local {
+  background: var(--acc-soft);
+  border: 1px solid rgba(79, 156, 247, .3)
+}
+
+.setup-steps {
+  font-size: 0.76875rem;
+  color: var(--dim);
+  line-height: 1.7
+}
+
+.setup-steps code {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  background: var(--panel3);
+  padding: 1px 5px;
+  border-radius: 5px;
+  color: var(--yellow)
+}
+
+.setup-steps ol {
+  margin: 6px 0 0 18px
+}
+
+.setup-steps li {
+  margin-bottom: 5px
+}
+
+.user-chip {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  background: var(--ok-soft);
+  border: 1px solid rgba(76, 195, 138, .3);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 0.78125rem
+}
+
+.user-chip b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px
+}
+
+/* ---------- Accessibility ---------- */
+
+/* a11y: visually-hidden text (state of the tree rows, counters): read by
+   screen readers, invisible on screen (checklist module 4) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0
+}
+
+/* SC 2.4.7 · keyboard focus: a clearly visible ring on every interactive
+   element (buttons, tabs, tree items, summaries, canvas, inputs) */
+:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px
+}
+
+/* inputs and textareas draw the ring inside their box, so it never gets
+   clipped by the surrounding chrome */
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: -1px
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important
+  }
+}
+
+/* ============================================================
+   FASE 1+2 · Pannelli GRAFICI e GIOCO (Pygame)
+   ============================================================ */
+
+/* Pannello Grafici (Matplotlib + Plotly) */
+.graphs-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  position: relative   /* v16.2 · anchor for the overlay toolbar in .fs */
+}
+
+.graphs-empty {
+  color: var(--faint);
+  font-style: italic;
+  font-size: 0.75rem;
+  padding: 14px;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 9px
+}
+
+/* a11y: <figure> reset — the chart card is a real figure/figcaption pair,
+   the browser default margin of figure must not break the grid */
+figure.graph-card {
+  margin: 0
+}
+
+.graph-card {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #101216;
+  overflow: hidden
+}
+
+.graph-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: #15171b;
+  font-size: 0.6875rem;
+  color: var(--dim)
+}
+
+.graph-card-head b {
+  color: var(--text);
+  font-weight: 600
+}
+
+.graph-card-head .badge {
+  margin-left: auto;
+  font-size: 0.625rem;
+  color: var(--faint);
+  font-family: var(--mono)
+}
+
+.graph-card-body {
+  padding: 6px;
+  overflow: auto;
+  max-width: 100%
+}
+
+.graph-card-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 5px;
+  background: #fff
+}
+
+.plotly-div {
+  width: 100%;
+  min-height: 280px;
+  background: #fff;
+  border-radius: 5px
+}
+
+/* FIX v7 · toolbar of the Charts panel (counter + "clear") */
+.graphs-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px
+}
+
+.graphs-toolbar .graphs-count {
+  margin-right: auto;
+  font-size: 0.625rem;
+  color: var(--faint);
+  font-family: var(--mono)
+}
+
+/* ===== NEW v16.2 · Charts panel full screen (toggled by setupFs in
+   app.js while .graphs-wrap is the fullscreen element): the toolbar
+   (count, 🧹 clear, ⛶ full screen) becomes a STICKY OVERLAY that floats
+   OVER the charts and follows the scroll — the same immersive treatment
+   as the meta bar of the Game panel. The wrap itself becomes the scroll
+   container, the cards keep their frame and the first row of charts
+   starts under the translucent toolbar. ===== */
+.graphs-wrap.fs {
+  background: #0b0c10;
+  gap: 12px;
+  padding: 0 14px 14px;
+  overflow: auto
+}
+
+.graphs-wrap.fs .graphs-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 0 -14px;
+  padding: 10px 14px 12px;
+  background: linear-gradient(rgba(8, 9, 13, .93), rgba(8, 9, 13, .55) 70%, rgba(8, 9, 13, 0))
+}
+
+/* glassy pills, readable over the scrim and over the white charts below */
+.graphs-wrap.fs .graphs-toolbar .btn {
+  background: rgba(255, 255, 255, .13);
+  border-color: rgba(255, 255, 255, .3);
+  color: #f2f4f8;
+  backdrop-filter: blur(5px)
+}
+
+.graphs-wrap.fs .graphs-toolbar .btn:hover {
+  background: rgba(255, 255, 255, .22);
+  border-color: rgba(255, 255, 255, .48)
+}
+
+.graphs-wrap.fs .graphs-toolbar .graphs-count {
+  color: #c6ccd8
+}
+
+.graphs-wrap.fs .graph-card {
+  background: #101216
+}
+
+/* FIX v7 · close ✕ of the single chart in the card header */
+.graph-close {
+  flex: 0 0 auto;
+  margin-left: 8px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--dim);
+  font-size: 0.6875rem;
+  line-height: 1;
+  cursor: pointer
+}
+
+.graph-close:hover {
+  border-color: #ff7b72;
+  background: #3a2326;
+  color: #ff7b72
+}
+
+/* FIX v7 · error message instead of the chart (plotly.js cannot be loaded) */
+.plotly-err {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  padding: 14px;
+  background: #fff;
+  color: #b3473e;
+  font-size: 0.75rem;
+  text-align: center
+}
+
+/* Pannello Gioco (Pygame) */
+.game-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  position: relative;   /* v16.1 · anchor for the full-screen overlays (meta bar, pad) */
+  /* FIX v8 · direct children must not overflow: the canvas scales */
+  min-height: 0
+}
+
+.game-empty {
+  color: var(--faint);
+  font-style: italic;
+  font-size: 0.75rem;
+  padding: 14px;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 9px
+}
+
+/* FIX v8 · flexible stage: fills the space left between the meta
+   bar (above) and the help (below) and centers the canvas. Before,
+   the fixed-size canvas (max-width only) was cut off at the bottom
+   when the dock group was short: only a ~100 px strip of the game
+   screen was visible. */
+.game-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden
+}
+
+.game-canvas {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #000;
+  /* FIX v8 · the canvas adapts to the available space, in both
+     directions, while keeping the aspect ratio (replaced element with
+     intrinsic 800×533 dimensions). Mouse coordinates are already
+     rescaled in gameCanvasPos(), so it stays playable. */
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  image-rendering: pixelated;
+  /* interactive: the canvas captures the keyboard */
+  cursor: crosshair;
+  outline: none;
+  touch-action: none
+}
+
+.game-canvas:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 2px rgba(79, 156, 247, .25)
+}
+
+.game-meta {
+  font-size: 0.6875rem;
+  color: var(--faint);
+  font-family: var(--mono);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center
+}
+
+.game-meta b {
+  color: var(--text)
+}
+
+.game-meta .st {
+  color: var(--text)
+}
+
+.game-help {
+  font-size: 0.6875rem;
+  color: var(--faint);
+  line-height: 1.6;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px
+}
+
+.game-help .kbd {
+  display: inline-block;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  margin: 0 1px;
+  background: var(--panel);
+  color: var(--text)
+}
+
+.btn.tiny {
+  padding: 2px 9px;
+  font-size: 0.65625rem;
+  border-radius: 5px
+}
+
+/* Input modal (the Python code's input()) */
+.input-modal-field {
+  width: 100%;
+  background: #141519;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 0.8125rem;
+  color: var(--text);
+  outline: none;
+  font-family: var(--mono);
+}
+
+.input-modal-field:focus {
+  border-color: var(--acc-line)
+}
+
+.input-modal-prompt {
+  font-size: 0.8125rem;
+  color: var(--dim);
+  margin-bottom: 9px;
+  font-family: var(--mono);
+  white-space: pre-wrap
+}
+
+/* Badge runtime pacchetti */
+.sb-chip.pkg {
+  background: rgba(111, 211, 231, .13);
+  color: var(--cyan)
+}
+
+/* ============================================================
+   ===== NUOVO v10 · pannello CODICE (editor) — v18: solo editor, output nella tab Console =====
+   ============================================================ */
+/* ===== CHANGED v17 · min-height instead of height: with the auto-grown
+     editor the wrap may exceed the panel — and that is fine, the PANEL
+     scrolls (dk-panel is the scroll container). ===== */
+.codice-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 100%
+}
+
+.codice-headrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap
+}
+
+/* file tabs (multi-file exercises only: 9-10, 9-11, 9-12, 11-1, 11-3) */
+.codice-tabs {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap
+}
+
+.codice-tabs button {
+  font-size: 0.71875rem;
+  padding: 4px 11px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--dim);
+  background: var(--bg2);
+  font-family: var(--mono);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer
+}
+
+.codice-tabs button.active {
+  border-color: var(--acc-line);
+  color: var(--acc);
+  background: var(--acc-soft)
+}
+
+.codice-tabs button.mod,
+.codice-tabs button.mod b {
+  color: var(--warn)
+}
+
+/* ===== NUOVO v11 · progetto completo (modo 'sol') ===== */
+/* ▶ marker on the file run by the button (the project's entry) */
+.codice-tabs button .tab-run {
+  color: var(--ok);
+  font-size: 0.625rem;
+  line-height: 1
+}
+
+/* tabs of the support modules (imported by main): more subdued style */
+.codice-tabs button.support {
+  font-style: italic;
+  opacity: .88
+}
+
+/* placeholder while the full program arrives from the local database */
+.codice-loading {
+  color: var(--dim);
+  font-size: 0.75rem;
+  padding: 10px 4px;
+  animation: pulse 1.2s ease-in-out infinite
+}
+@keyframes pulse {
+  0%, 100% { opacity: .55 }
+  50% { opacity: 1 }
+}
+
+/* other project files (data and images): read-only list */
+.codice-assets {
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.71875rem;
+  color: var(--dim);
+  background: var(--bg2)
+}
+.codice-assets summary {
+  cursor: pointer;
+  font-family: var(--mono);
+  color: var(--acc)
+}
+.codice-asset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 6px
+}
+.codice-asset {
+  font-family: var(--mono);
+  font-size: 0.6875rem
+}
+
+/* full-program editor ===== CHANGED v17 · wider zone: 14px mono type,
+     260px minimum, flex 1 0 auto (grows with the content via
+     armAutogrow(), never shrinks below it; flex-grow still lets a short
+     program fill the panel). ===== */
+.codice-ta {
+  width: 100%;
+  flex: 1 0 auto;
+  min-height: 260px;
+  background: #141519;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 13px 15px;
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  line-height: 1.75;
+  color: #e8eaf0;
+  resize: vertical;
+  outline: none;
+  white-space: pre;
+  overflow: auto
+}
+
+.codice-ta:focus {
+  border-color: var(--acc-line)
+}
+
+/* «⟲ restore original» highlighted when there are edits to discard */
+#cdReset.armed {
+  border-color: var(--warn);
+  color: var(--warn)
+}
+
+/* ===== CHANGED v18 · the Code and Lines panels are EDITOR-ONLY: the
+   terminal that sat under the textarea is gone (ONE console — the Console
+   tab). In its place this compact note: where the output of ▶ Run lands,
+   kept up to date by updateCodiceOut(), plus the "open Console" button. ===== */
+.ed-out-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border: 1px dashed var(--border);
+  border-radius: 9px;
+  padding: 7px 11px;
+  font-size: 0.71875rem;
+  color: var(--dim);
+  background: var(--bg2)
+}
+
+.ed-out-note [data-outnote] {
+  line-height: 1.55
+}
+
+.ed-out-note .btn-cl {
+  margin-left: auto;
+  flex: none
+}
+/* ============================================================
+   ===== NUOVO v12 · pannello RIGHE (editor leggero) =====
+   Solo le righe dell'esercizio, un blocco per file/regione,
+   con il riferimento al modulo che le contiene.
+   ============================================================ */
+.righe-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 100%
+}
+
+/* ===== CHANGED v17 · overflow visible: the blocks grow with their
+     content (armAutogrow) and the PANEL scrolls — no nested scroll. ===== */
+.righe-blocchi {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: visible;
+  min-height: 120px
+}
+
+.righe-blocco {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg2);
+  padding: 0 0 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px
+}
+
+.righe-blocco.extra::before {
+  content: "⋯ altre righe dello stesso esercizio ⋯";
+  display: block;
+  text-align: center;
+  color: var(--dim);
+  font-size: 0.65625rem;
+  padding: 6px 0 0 0;
+  letter-spacing: .4px
+}
+
+/* block header: THE REFERENCE to the module holding the lines */
+.rg-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 7px 10px 0 10px
+}
+
+.rg-file {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--acc);
+  font-weight: 600
+}
+
+.rg-range {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  color: var(--dim);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 7px;
+  background: var(--bg)
+}
+
+.rg-of {
+  font-size: 0.65625rem;
+  color: var(--dim);
+  font-style: italic
+}
+
+/* block editor: lower than the full program (few lines) */
+.righe-blocco .rg-ta {
+  min-height: 52px;
+  flex: none;
+  margin: 0 6px;
+  width: calc(100% - 12px)
+}
+
+.righe-blocco .rg-ta:focus {
+  border-color: var(--acc-line)
+}
+
+/* «⟲ restore original» highlighted when there are edits to discard */
+#rgReset.armed {
+  border-color: var(--warn);
+  color: var(--warn)
+}
+
+/* ===== v12.1 · ⚙ PONTE: the exercise lines → project correspondences ===== */
+/* chips of the modules cited in the reference (file + lines), clickable */
+.rg-rif {
+  margin: 1px 2px 1px 0
+}
+
+/* list of the correspondences (one per bridge rule) */
+.rg-ponte {
+  border: 1px dashed var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px
+}
+
+.rg-ponte-t {
+  font-size: 0.6875rem;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 600
+}
+
+.rg-ponte-r {
+  font-family: var(--mono);
+  font-size: 0.71875rem;
+  line-height: 1.75;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap
+}
+
+.rg-ponte-r code {
+  font-family: var(--mono);
+  font-size: 0.71875rem;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0 5px
+}
+
+.rg-ponte-da {
+  color: var(--dim)
+}
+
+.rg-ponte-ok {
+  color: var(--ok);
+  font-weight: 600
+}
+
+.rg-ponte-warn {
+  color: var(--warn);
+  font-weight: 600
+}
+
+/* ---------- a11y · high-contrast preference (WCAG / user OS setting) ---------- */
 @media (prefers-contrast: more) {
   :root {
-    --border: #b7c2d2;
-    --border2: #9fadc2;
-    --dim: #3c4759;
-    --faint: #4a566b;
-    --text: #171d27
+    --border: #4a4e5a;
+    --border2: #5a5f6d;
+    --dim: #b8bfcc;
+    --faint: #a7aebc;
+    --text: #e9ebf1
+  }
+
+  /* the muted hierarchy stays intact but every level gains contrast */
+  :focus-visible {
+    outline-width: 3px
+  }
+
+  input:focus-visible,
+  textarea:focus-visible {
+    outline-width: 3px
+  }
+}
+
+/* ============================================================
+   ===== v16 · MODULES DRAWER + GUIDE OVERLAY + MOBILE TABS =====
+   ------------------------------------------------------------
+   New app chrome: the Modules tree slides in from the left (drawer),
+   the Guide floats above the work area (overlay), the mobile bar
+   gains five primary tabs + a "⋯ More" drop-up menu, the confirm
+   dialogs become bottom sheets on a phone, and the Game panel gets
+   an on-screen pad (a phone has no keyboard).
+   ============================================================ */
+
+/* the [hidden] attribute must always win over the display rules below,
+   or the closed drawer/overlay would stay painted */
+.drawer-bg[hidden],
+.drawer[hidden],
+.ovl-bg[hidden],
+.ovl[hidden] {
+  display: none
+}
+
+/* ---------- Modules drawer (side-sliding menu) ---------- */
+/* ===== CHANGED v16.1 · the drawer no longer covers the activity bar nor
+   the titlebar: it slides over the WORK AREA only, flush against the right
+   edge of the sidebar (VS Code style). Why: before, the open drawer hid
+   the very icon that had opened it, so clicking it again — the natural
+   "close it" gesture — landed on the drawer's search box instead. With
+   the bar visible the icon stays clickable and toggles the drawer. The
+   backdrop too starts below the titlebar, so the top bar keeps working
+   (e.g. "? Guide") while the drawer is open. ===== */
+.drawer-bg {
+  position: fixed;
+  left: 46px;   /* v16.1 · after the activity bar */
+  top: 38px;    /* v16.1 · below the titlebar */
+  right: 0;
+  bottom: 0;
+  background: rgba(8, 9, 12, .55);
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity .24s
+}
+
+#drawerHost.open .drawer-bg {
+  opacity: 1
+}
+
+.drawer {
+  position: fixed;
+  left: 46px;   /* v16.1 · after the activity bar */
+  top: 38px;    /* v16.1 · below the titlebar */
+  bottom: 0;
+  width: 348px;
+  max-width: 88vw;
+  z-index: 1001;
+  background: var(--panel);
+  border-right: 1px solid var(--border2);
+  border-radius: 0 20px 20px 0;   /* v16.2 · bubble look: soft right corners */
+  box-shadow: 24px 0 70px rgba(0, 0, 0, .45);
+  display: flex;
+  flex-direction: column;
+  transform-origin: left center;
+  /* ===== CHANGED v16.2 · bubble animation: while closed the drawer is
+     slightly SQUASHED (scale .96, hugging the sidebar); opening springs
+     in with a soft overshoot — it pops like a soap bubble. Closing keeps
+     a quick, sober curve. The transition of the DESTINATION state is the
+     one that runs: the springy curve lives in the .open rule below, this
+     base curve only plays on the way out. ===== */
+  transform: translateX(-103%) scale(.96);
+  transition: transform .3s cubic-bezier(.5, 0, .75, .4)
+}
+
+#drawerHost.open .drawer {
+  transform: none;
+  /* v16.2 · the bubble pop: past-1 overshoot on both translate and scale */
+  transition: transform .55s cubic-bezier(.2, 1.35, .3, 1)
+}
+
+.drawer-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--border)
+}
+
+.drawer-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.drawer-title svg {
+  width: 17px;
+  height: 17px;
+  color: var(--acc);
+  flex: none
+}
+
+.drawer-x {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--faint);
+  font-size: 0.875rem
+}
+
+.drawer-x:hover {
+  color: var(--text);
+  background: var(--panel2)
+}
+
+.drawer-search {
+  flex: none;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border)
+}
+
+.drawer-search input {
+  width: 100%;
+  background: #141519;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-size: 0.78125rem;
+  color: var(--text);
+  outline: none
+}
+
+.drawer-search input:focus-visible {
+  border-color: var(--acc-line)
+}
+
+.drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 10px 14px
+}
+
+.drawer-foot {
+  flex: none;
+  padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px));
+  font-size: 0.65625rem;
+  color: var(--faint);
+  border-top: 1px solid var(--border)
+}
+
+/* ---------- Guide overlay ---------- */
+.ovl-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 9, 12, .62);
+  z-index: 1050;
+  opacity: 0;
+  transition: opacity .2s
+}
+
+#overlayHost.open .ovl-bg,
+#settingsHost.open .ovl-bg {
+  opacity: 1
+}
+
+.ovl {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 1051;
+  width: min(780px, calc(100vw - 44px));
+  max-height: min(84vh, 900px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .6);
+  opacity: 0;
+  transform: translate(-50%, -46.5%) scale(.985);
+  transition: opacity .2s, transform .2s
+}
+
+#overlayHost.open .ovl,
+#settingsHost.open .ovl {
+  opacity: 1;
+  transform: translate(-50%, -50%)
+}
+
+.ovl-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border)
+}
+
+.ovl-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: var(--text)
+}
+
+.ovl-title svg {
+  width: 17px;
+  height: 17px;
+  color: var(--acc);
+  flex: none
+}
+
+.ovl-x {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--faint);
+  font-size: 0.875rem
+}
+
+.ovl-x:hover {
+  color: var(--text);
+  background: var(--panel2)
+}
+
+.ovl-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 18px 20px
+}
+
+/* ============================================================
+   ===== NEW v17 · SETTINGS OVERLAY (same shell as the Guide, hosted
+   in #settingsHost): the .stg variant is a bit narrower, and the
+   sections below (theme cards, switch, privacy list) are its body. =====
+   ============================================================ */
+.ovl.stg {
+  width: min(640px, calc(100vw - 44px))
+}
+
+.stg-wrap {
+  padding: 12px 2px 4px
+}
+
+.stg-sec {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg2);
+  padding: 13px 15px 15px;
+  margin-bottom: 14px
+}
+
+.stg-sec h3 {
+  font-size: 0.84375rem;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 7px
+}
+
+.stg-note {
+  font-size: 0.71875rem;
+  color: var(--dim);
+  line-height: 1.6;
+  margin: 8px 0 0
+}
+
+.stg-note code {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0 5px
+}
+
+/* ===== NEW v18 · the 3-step Supabase setup list shown in Settings →
+   credentials when the cloud is not configured yet (the site is online:
+   the owner reads here exactly what to do). ===== */
+.stg-steps {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  font-size: 0.71875rem;
+  color: var(--dim);
+  line-height: 1.75
+}
+
+.stg-steps li {
+  margin: 2px 0
+}
+
+.stg-steps code {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0 5px
+}
+
+/* theme cards: two big radio-like buttons with a mini preview */
+.theme-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px
+}
+
+@media (max-width:480px) {
+  .theme-cards {
+    grid-template-columns: 1fr
+  }
+}
+
+.theme-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 13px 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--dim);
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, transform .15s
+}
+
+.theme-card:hover {
+  transform: translateY(-1px)
+}
+
+.theme-card.on {
+  border-color: var(--acc-line);
+  box-shadow: 0 0 0 2px var(--acc-soft);
+  color: var(--text)
+}
+
+.theme-card b {
+  font-size: 0.8125rem
+}
+
+.theme-card .tc-sub {
+  font-size: 0.65625rem;
+  color: var(--faint)
+}
+
+/* the mini preview: three stacked strips (chrome / surface / code) */
+.tc-prev {
+  width: 100%;
+  height: 58px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border)
+}
+
+.tc-prev i {
+  display: block;
+  flex: none
+}
+
+.tc-prev .a {
+  height: 14px
+}
+
+.tc-prev .b {
+  height: 20px
+}
+
+.tc-prev .c {
+  height: 24px
+}
+
+/* dark preview */
+.tc-dark .a { background: #131418 }
+.tc-dark .b { background: #212228 }
+.tc-dark .c { background: #141519 }
+
+/* light preview (playful: warm cream chrome, soft lilac surface, BLACK code) */
+.tc-light .a { background: #f7f1e8 }
+.tc-light .b { background: #efe9fb }
+.tc-light .c { background: #141519 }
+
+/* privacy list */
+.priv-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px
+}
+
+.priv-list li {
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--dim);
+  padding-left: 20px;
+  position: relative
+}
+
+.priv-list li::before {
+  content: "•";
+  position: absolute;
+  left: 6px;
+  color: var(--acc)
+}
+
+.priv-list code {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0 5px
+}
+
+/* the cloud-sync row with the switch */
+.priv-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  padding: 10px 13px
+}
+
+.priv-row b {
+  display: block;
+  font-size: 0.78125rem;
+  color: var(--text)
+}
+
+.priv-row span {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--faint);
+  margin-top: 2px
+}
+
+/* the switch itself */
+.switch {
+  flex: none;
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--border2);
+  background: var(--panel3);
+  position: relative;
+  cursor: pointer;
+  transition: background .18s, border-color .18s
+}
+
+.switch i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--faint);
+  transition: transform .22s cubic-bezier(.25, 1.4, .4, 1), background .18s
+}
+
+.switch.on {
+  background: var(--acc-soft);
+  border-color: var(--acc-line)
+}
+
+.switch.on i {
+  transform: translateX(20px);
+  background: var(--acc)
+}
+
+.switch:disabled {
+  opacity: .45;
+  cursor: not-allowed
+}
+
+/* link-styled button ("? how it works" in the Code panel) */
+.sub-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--acc);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer
+}
+
+.sub-link:hover {
+  color: var(--text)
+}
+
+/* ---------- mobile · "⋯ More" drop-up menu ---------- */
+.m-more-wrap {
+  flex: 1;
+  position: relative;
+  display: flex
+}
+
+.m-more-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border-radius: 9px;
+  font-size: 0.625rem;
+  color: var(--faint);
+  min-height: 48px
+}
+
+.m-more-btn svg {
+  width: 19px;
+  height: 19px
+}
+
+.m-more-btn.active {
+  color: var(--acc);
+  background: var(--acc-soft)
+}
+
+.m-more-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 6px;
+  min-width: 206px;
+  padding: 6px;
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
+  z-index: 950;
+  animation: hint-in .16s
+}
+
+.m-more-menu button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  color: var(--text);
+  text-align: left
+}
+
+.m-more-menu button svg {
+  width: 17px;
+  height: 17px;
+  color: var(--faint);
+  flex: none
+}
+
+.m-more-menu button.active {
+  background: var(--acc-soft);
+  color: var(--acc)
+}
+
+.m-more-menu button.active svg {
+  color: var(--acc)
+}
+
+/* ---------- mobile · on-screen game pad ----------
+   ===== CHANGED v16.1 · redesigned for immersion: bigger keys (56px, well
+   above the 48px touch minimum), a pressed-key 3D look, a wider pill for
+   FIRE, tiny labels under the glyphs, and a bar that respects the
+   safe-area at the bottom. ===== */
+.game-pad {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(#191b21, #0d0e12);
+  border-top: 1px solid var(--border);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none
+}
+
+.gp-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(2, 56px);
+  gap: 8px
+}
+
+.gp-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch
+}
+
+.gp {
+  min-width: 56px;
+  min-height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(#23252d, #1a1c22);
+  border: 1px solid #32353f;
+  box-shadow: 0 3px 0 #0a0b0e;
+  color: var(--text);
+  font-size: 1.0625rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1;
+  touch-action: none;
+  transition: transform .06s ease, box-shadow .06s ease, background-color .06s ease
+}
+
+.gp .gp-lbl {
+  font-size: 0.5625rem;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: var(--faint)
+}
+
+.gp-fire {
+  min-width: 112px;
+  min-height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(#2b3a55, #1e2a40);
+  border-color: #3d5c8a;
+  color: #cfe2ff
+}
+
+.gp-fire .gp-glyph {
+  font-weight: 700;
+  font-size: 0.9375rem
+}
+
+.gp-q {
+  min-height: 48px
+}
+
+.gp.on,
+.gp:active {
+  background: var(--acc-soft);
+  border-color: var(--acc-line);
+  color: var(--acc);
+  transform: translateY(3px);
+  box-shadow: none
+}
+
+.gp.on .gp-lbl,
+.gp:active .gp-lbl {
+  color: var(--acc)
+}
+
+/* ===== NEW v16.1 · immersive full screen (.fs is toggled by
+   setupGameFs in app.js while the wrap is the fullscreen element) ===== */
+.game-wrap.fs {
+  background: #06070a;
+  gap: 0
+}
+
+.game-wrap.fs .game-meta {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  margin: 0;
+  padding: 10px 12px;
+  background: linear-gradient(rgba(4, 5, 8, .88), rgba(4, 5, 8, 0));
+  border-radius: 0
+}
+
+.game-wrap.fs .game-help {
+  display: none
+}
+
+.game-wrap.fs .game-canvas {
+  border: none;
+  border-radius: 0;
+  max-width: 100%;
+  max-height: 100%
+}
+
+/* in full screen the pad floats over the bottom of the canvas: the whole
+   screen belongs to the game (the fullscreen element is the containing
+   block, so absolute anchors to the wrap == the screen) */
+.game-wrap.fs .game-pad {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  background: linear-gradient(rgba(4, 5, 8, 0), rgba(4, 5, 8, .82) 60%);
+  border-top: none
+}
+
+.gm-actions {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: auto
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(48px);
+    opacity: .3
+  }
+}
+
+/* ---------- v16 · mobile refinements ---------- */
+@media (max-width:768px) {
+
+  /* the confirm dialogs are no longer centered pop-ups: they slide up
+     from the bottom edge, like a native mobile action sheet. The scrim
+     is a touch stronger than on desktop: on a phone the sheet sits right
+     on top of tappable content. */
+  .modal-bg {
+    align-items: flex-end;
+    padding: 0;
+    background: rgba(8, 9, 12, .74)
+  }
+
+  .modal {
+    max-width: none;
+    border-radius: 15px 15px 0 0;
+    padding: 17px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    animation: sheet-in .22s ease-out
+  }
+
+  /* the Guide overlay becomes a sheet anchored to the bottom */
+  .ovl {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: auto;
+    max-width: none;
+    max-height: 88vh;
+    border-radius: 15px 15px 0 0;
+    border-bottom: none;
+    transform: translateY(103%);
+    opacity: 1
+  }
+
+  #overlayHost.open .ovl,
+  #settingsHost.open .ovl {
+    transform: none
+  }
+
+  /* the drawer covers most of the phone, but starts BELOW the mobile
+     header (v16.1): the ☰ button stays visible and re-tapping it closes
+     the drawer, exactly like the sidebar icon on desktop */
+  .drawer {
+    left: 0;
+    top: 54px;
+    width: min(86vw, 348px)
+  }
+
+  .drawer-bg {
+    left: 0;
+    top: 54px
+  }
+
+  /* the game canvas sits right above the on-screen pad, with no dead
+     space: the stage wraps the canvas instead of reserving half the
+     viewport, and the pad + help follow immediately
+     ===== CHANGED v16.1 · edge-to-edge game tab: no panel padding, dark
+     stage, full-width canvas — the phone feels like a console ===== */
+  .m-panel.gioco-panel {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0
+  }
+
+  .gioco-panel .game-wrap {
+    background: #0b0c10;
+    gap: 0
+  }
+
+  .gioco-panel .game-meta {
+    padding: 8px 12px;
+    background: #101116
+  }
+
+  .game-stage {
+    flex: 0 0 auto;
+    min-height: 0
+  }
+
+  .game-canvas {
+    width: 100%;
+    max-height: 48vh;
+    border-radius: 0;
+    border-left: none;
+    border-right: none
+  }
+
+  .gioco-panel .game-help {
+    margin: 0 12px;
+    padding: 8px 0 10px
+  }
+}
+
+/* very small phones: icons only in the bottom bar (the labels return
+   inside the More menu, which has room for them) */
+@media (max-width:390px) {
+
+  .m-nav > button span,
+  .m-more-btn span {
+    display: none
   }
 }
