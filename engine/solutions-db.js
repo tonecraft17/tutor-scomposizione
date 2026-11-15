@@ -26,8 +26,8 @@
    it is used only by the runtime to provide the correct output
    of multi-file exercises.
    ============================================================ */
-import { SOLUTIONS_INDEX, SOLUTIONS_INDEX_VERSION } from '../data/solutions-index.js?v=19'; // ===== CHANGED v16.1 · versioned specifier (stale-ServiceWorker fix, see app.js) =====
-import { SOLUTIONS as CFG } from '../config.js?v=19';
+import { SOLUTIONS_INDEX, SOLUTIONS_INDEX_VERSION } from '../data/solutions-index.js?v=20'; // ===== CHANGED v16.1 · versioned specifier (stale-ServiceWorker fix, see app.js) =====
+import { SOLUTIONS as CFG } from '../config.js?v=20';
 
 let db = null;                      // IDBDatabase
 const cache = new Map();            // id -> merged solution (or null)
@@ -40,25 +40,25 @@ let seedInfo = { done: false, count: 0, reseeded: false, fallback: false };
    (explicit specifiers keep the import graph analyzable and work
    on every static host, including GitHub Pages) */
 const CHAPTER_BUNDLES = {
-  2:  () => import('../data/solutions/ch2.js?v=19'),
-  3:  () => import('../data/solutions/ch3.js?v=19'),
-  4:  () => import('../data/solutions/ch4.js?v=19'),
-  5:  () => import('../data/solutions/ch5.js?v=19'),
-  6:  () => import('../data/solutions/ch6.js?v=19'),
-  7:  () => import('../data/solutions/ch7.js?v=19'),
-  8:  () => import('../data/solutions/ch8.js?v=19'),
-  9:  () => import('../data/solutions/ch9.js?v=19'),
-  10: () => import('../data/solutions/ch10.js?v=19'),
-  11: () => import('../data/solutions/ch11.js?v=19'),
-  12: () => import('../data/solutions/ch12.js?v=19'),
-  13: () => import('../data/solutions/ch13.js?v=19'),
-  14: () => import('../data/solutions/ch14.js?v=19'),
-  15: () => import('../data/solutions/ch15.js?v=19'),
-  16: () => import('../data/solutions/ch16.js?v=19'),
-  17: () => import('../data/solutions/ch17.js?v=19'),
-  18: () => import('../data/solutions/ch18.js?v=19'),
-  19: () => import('../data/solutions/ch19.js?v=19'),
-  20: () => import('../data/solutions/ch20.js?v=19'),
+  2:  () => import('../data/solutions/ch2.js?v=20'),
+  3:  () => import('../data/solutions/ch3.js?v=20'),
+  4:  () => import('../data/solutions/ch4.js?v=20'),
+  5:  () => import('../data/solutions/ch5.js?v=20'),
+  6:  () => import('../data/solutions/ch6.js?v=20'),
+  7:  () => import('../data/solutions/ch7.js?v=20'),
+  8:  () => import('../data/solutions/ch8.js?v=20'),
+  9:  () => import('../data/solutions/ch9.js?v=20'),
+  10: () => import('../data/solutions/ch10.js?v=20'),
+  11: () => import('../data/solutions/ch11.js?v=20'),
+  12: () => import('../data/solutions/ch12.js?v=20'),
+  13: () => import('../data/solutions/ch13.js?v=20'),
+  14: () => import('../data/solutions/ch14.js?v=20'),
+  15: () => import('../data/solutions/ch15.js?v=20'),
+  16: () => import('../data/solutions/ch16.js?v=20'),
+  17: () => import('../data/solutions/ch17.js?v=20'),
+  18: () => import('../data/solutions/ch18.js?v=20'),
+  19: () => import('../data/solutions/ch19.js?v=20'),
+  20: () => import('../data/solutions/ch20.js?v=20'),
 };
 
 /* ---------- small promise layer over IndexedDB ---------- */

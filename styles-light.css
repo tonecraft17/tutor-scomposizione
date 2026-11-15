@@ -447,3 +447,61 @@ html[data-theme="light"] .console-out .run-block.sol {
     --text: #201b36;
   }
 }
+
+/* ============================================================
+   ===== NEW v20 · HOMEPAGE, light edition =====
+   ------------------------------------------------------------
+   The presentation page follows the app theme: cream background,
+   soft pastel glows, white cards. The CTA keeps the blue gradient
+   (it reads well on cream); the hero gradient gets deeper hues for
+   contrast on the light surface.
+   ============================================================ */
+html[data-theme="light"] #homePage {
+  background:
+    radial-gradient(1100px 520px at 82% -12%, rgba(79, 156, 247, .14), transparent 62%),
+    radial-gradient(900px 440px at -12% 112%, rgba(246, 165, 175, .16), transparent 55%),
+    var(--bg);
+}
+
+html[data-theme="light"] .hp-title em {
+  background: linear-gradient(92deg, #2f7de1, #c935b0);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent
+}
+
+html[data-theme="light"] .hp-card {
+  background: #ffffff;
+  border-color: var(--border);
+  box-shadow: 0 4px 18px rgba(58, 48, 92, .08);
+}
+
+html[data-theme="light"] .hp-card:hover {
+  background: #ffffff;
+  border-color: var(--acc-line);
+  box-shadow: 0 14px 30px rgba(58, 48, 92, .16)
+}
+
+html[data-theme="light"] .hp-btn {
+  background: #ffffff;
+  border-color: var(--border2)
+}
+
+html[data-theme="light"] .hp-btn:hover {
+  box-shadow: 0 10px 24px rgba(58, 48, 92, .18)
+}
+
+html[data-theme="light"] .hp-btn.primary {
+  background: linear-gradient(135deg, #4f9cf7, #3d7fd9);
+  color: #ffffff;
+  border-color: transparent
+}
+
+html[data-theme="light"] .hp-btn.primary:hover {
+  box-shadow: 0 12px 28px rgba(79, 156, 247, .4)
+}
+
+html[data-theme="light"] .hp-nojs {
+  background: #ffffff
+}

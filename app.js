@@ -1,7 +1,7 @@
 /* ============================================================
    APP · entry point: joins the modules and starts the app
    ============================================================ */
-/* ===== NEW v16.1 · every ES-module import now carries the same ?v=19
+/* ===== NEW v16.1 · every ES-module import now carries the same ?v=20
    query as the <script>/<link> tags in index.html. WHY: the service worker
    caches same-origin GETs by their FULL URL (query included), and the
    module files used to have NO version in their URL. On the first visit
@@ -13,21 +13,21 @@
    stale worker cache-misses and fetches the fresh, consistent set. The
    specifiers must stay character-for-character identical to the
    modulepreload hrefs in index.html, or each file would be fetched twice. ===== */
-import { APP, KEYS, supabaseConfigured, PLOTLY_JS } from './config.js?v=19';
-import { CH, EX, ORDER, TOTAL_EX, ROADMAP, codiceEsercizio } from './data/exercises.js?v=19';
-import { createDock, isMobile, icon } from './engine/dock.js?v=19';
+import { APP, KEYS, supabaseConfigured, PLOTLY_JS } from './config.js?v=20';
+import { CH, EX, ORDER, TOTAL_EX, ROADMAP, codiceEsercizio } from './data/exercises.js?v=20';
+import { createDock, isMobile, icon } from './engine/dock.js?v=20';
 import {
   stateFor, righeUtente, righeUtenteRaw, righeUtenteConCommenti, conRientro, checkStep, assistLabel, assistSummary,
   autonomiaOf, globalStats, nextExercise, verificaOutput
-} from './engine/tutor.js?v=19';
+} from './engine/tutor.js?v=20';
 import {
   runPythonCode, getStatus, onPythonStatus,
   onMatplotlibImage, onPlotlyFigure, onPygameFrame,
   onPythonRunEnd, sendPygameEvent, stopPygameGame
-} from './engine/python-runner.js?v=19'; // ===== MODIFIED =====
-import * as storage from './engine/storage.js?v=19';
-import * as solDb from './engine/solutions-db.js?v=19'; // ===== NEW · local solutions database =====
-import { PONTE } from './engine/ponte.js?v=19'; // ===== NEW v12.1 · bridge from exercise lines → project =====
+} from './engine/python-runner.js?v=20'; // ===== MODIFIED =====
+import * as storage from './engine/storage.js?v=20';
+import * as solDb from './engine/solutions-db.js?v=20'; // ===== NEW · local solutions database =====
+import { PONTE } from './engine/ponte.js?v=20'; // ===== NEW v12.1 · bridge from exercise lines → project =====
 
 /* ---------- UI utilities ---------- */
 const $ = s => document.querySelector(s);
@@ -53,7 +53,14 @@ function armAutogrow(ta, minH) {
   ta.addEventListener('focus', fit);
   fit();
 }
+/* ===== NEW v20 · toast queue while the homepage is up: informational
+   toasts fired during load (solutions database, sync notices) wait in
+   line instead of covering the presentation — enterApp() flushes them
+   once the visitor is inside the app. The DOM check (not the HOME
+   flag) keeps this safe at any evaluation order. ===== */
+const toastQueue = [];
 function toast(msg, type) {
+  if (document.getElementById('homePage')) { toastQueue.push([msg, type]); return; }
   const t = elHtml(`<div class="toast ${type || ''}">${msg}</div>`);
   $('#toasts').appendChild(t);
   setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 320); }, 3600);
@@ -155,6 +162,10 @@ function toggleDrawer(open) {
   const want = open === undefined ? !DRAWER.open : !!open;
   if (want === DRAWER.open) return;
   DRAWER.open = want;
+  /* ===== NEW v20 · the header is always visible while (and right
+     after) using a menu/overlay: scrolling inside these surfaces used
+     to slide the titlebar away with no way back once closed. ===== */
+  document.body.classList.remove('head-off');
   /* ===== NEW v19 · while the drawer is open the activity bar must NOT
      expand on hover: the two menus used to fight for the same pixels
      (labels sliding under the drawer, mid-animation). styles.css reads
@@ -226,6 +237,10 @@ function toggleGuida(open) {
   const want = open === undefined ? !OVL.open : !!open;
   if (want === OVL.open) return;
   OVL.open = want;
+  /* ===== NEW v20 · same as the drawer: opening/closing the Guide
+     always brings the header back (it never hides while it is open —
+     see the scroll watcher in init()). ===== */
+  document.body.classList.remove('head-off');
   const ab = document.querySelector('.act-btn[data-panel="guida"]');
   if (want) {
     OVL.invoker = document.activeElement;
@@ -243,6 +258,58 @@ function toggleGuida(open) {
     if (ab) ab.classList.remove('active');
     setTimeout(() => { if (!OVL.open) { bg.hidden = true; ovl.hidden = true; } }, 240);
   }
+}
+
+/* ============================================================
+   ===== NEW v20 · HOMEPAGE (presentation of the site) =====
+   ------------------------------------------------------------
+   index.html ships a static #homePage section (hero, feature cards,
+   CTAs): it is the first thing a visitor sees, it doubles as real
+   crawlable content for search engines, and it costs the first paint
+   nothing (plain HTML + CSS — no JS needed to show it). enterApp()
+   dismisses it with a fade, marks the session so a reload in the same
+   tab goes straight to the workbench (the skip flag is set on <html>
+   by the bootstrap script in <head>, BEFORE the CSS parses — no
+   flash of homepage), and fires the welcome tour on the very first
+   visit — now that the workbench is actually visible.
+   ============================================================ */
+const HOME = { entered: false };
+function enterApp(action) {
+  if (HOME.entered) return;
+  HOME.entered = true;
+  try { sessionStorage.setItem('tutorHomeDone', '1'); } catch (e) { }
+  document.body.classList.add('in-app');
+  const hp = document.getElementById('homePage');
+  /* the toasts that arrived while the presentation was up are released
+     right after the node is gone (toast() re-queues while it is still
+     in the DOM), so the visitor finds them waiting inside the app */
+  const flushToasts = () => toastQueue.splice(0).forEach(([m, t]) => toast(m, t));
+  if (hp) {
+    hp.classList.add('away');
+    setTimeout(() => { if (hp.parentNode) hp.remove(); flushToasts(); }, 540);
+  } else flushToasts();
+  welcomeTour();
+  if (action === 'browse') setTimeout(() => toggleDrawer(true), 580);   /* just after the homepage node is gone: the drawer slides over the workbench alone */
+  const gs = $('#globalSearch');
+  if (gs && !isMobile()) { try { gs.focus({ preventScroll: true }); } catch (e) { } }
+}
+/* ===== CHANGED v20 · the welcome tour moved out of init(): the toasts
+   must wait until the visitor ENTERS the app, not fire behind the
+   homepage that still covers the workbench. ===== */
+function welcomeTour() {
+  if (storage.getSeen()) return;
+  if (isMobile()) {
+    setTimeout(() => toast('👋 Welcome! Tap <b>☰</b> to pick an exercise, <b>?</b> if you get lost.', ''), 800);
+    setTimeout(() => toast('The <b style="color:var(--acc)">blue words</b> are your hints 🪂 · ▶ <b>Run</b> executes real Python.', ''), 5200);
+  } else {
+    setTimeout(() => toast('👋 Welcome! Open an exercise from the <b>☰ Modules</b> menu on the left.', ''), 800);
+    setTimeout(() => toast('The <b style="color:var(--acc)">blue words</b> in the phrases are clickable: they are your hints 🪂'), 5200);
+    setTimeout(() => toast('▶ The <b>Run</b> button runs the code with a real Python in the browser.', ''), 9600);
+    setTimeout(() => toast('🖼 Matplotlib/Plotly charts and 🎮 Pygame games appear in their dedicated panels!', ''), 14000);
+    setTimeout(() => toast('⌨ The <b>code</b> button next to Run shows the full program: you can modify it and run your version again.', ''), 18400);
+    setTimeout(() => toast('✎ The <b>lines</b> button opens the lightweight editor: only the exercise lines, with the reference to the module that contains them.', ''), 23000);
+  }
+  storage.setSeen();
 }
 
 /* ============================================================
@@ -412,6 +479,9 @@ function toggleImpostazioni(open) {
   const want = open === undefined ? !STG.open : !!open;
   if (want === STG.open) return;
   STG.open = want;
+  /* ===== NEW v20 · same as the drawer/guide: the header comes back
+     the moment Settings opens or closes. ===== */
+  document.body.classList.remove('head-off');
   const ab = document.querySelector('.act-btn[data-panel="impostazioni"]');
   if (want) {
     STG.invoker = document.activeElement;
@@ -809,6 +879,7 @@ onPygameFrame(({ buf, b64, w, h, gw, gh }) => {
       ? '🎮 Game started: play with the <b>on-screen pad</b> under the canvas. ■ Stop closes it.'
       : '🎮 Game started: click the canvas in the <b>Game</b> panel (it captures the keyboard) and play with arrows/space/q. Press <b>■ Stop</b> to close it.', '');
     if (isMobile()) { dock.setMobileTab('gioco'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+    else dock.activateOrInsert('gioco');   /* v20 · the single tab bar lands on the game too */
   }
   // draws without rebuilding the panel (keyboard focus stays on the canvas)
   requestAnimationFrame(() => drawGameFrame());
@@ -1537,12 +1608,18 @@ async function eseguiEsercizio(e) {
       dock.setMobileTab(run.game ? 'gioco' : (run.chart && !outputUtile(res.output).trim() ? 'grafici' : 'console'));
       dock.renderMobilePanel(); dock.renderMobileNav();
     }
+    /* ===== NEW v20 · the desktop single tab bar lands on the panel that
+       holds the result too (the same rule the phone already used): with
+       one bar the output would otherwise stay hidden behind the Exercise
+       tab, like it was visible by default in the old split layout. ===== */
+    else dock.activateOrInsert(run.game ? 'gioco' : (run.chart && !outputUtile(res.output).trim() ? 'grafici' : 'console'));
   } else if (res.error && res.error.tipo === 'TimeoutError' && GAME.meta.ts > mediaBefore.f) {
     // ===== MODIFIED · a Pygame game had been running a while without closing:
     // the watchdog stopped it: it's not a student error =====
     run.err = null; run.game = true;
     toast('🎮 The game was closed by the tutor (time limit or inactivity): see the frames in the Game panel.', 'ok');
     if (isMobile()) { dock.setMobileTab('gioco'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+    else dock.activateOrInsert('gioco');   /* v20 · same landing on the single tab bar */
   } else {
     toast('Execution error: open the Console for the translated traceback.', 'err');
     // ===== NEW · fragments that modify larger programs =====
@@ -1561,6 +1638,7 @@ async function eseguiEsercizio(e) {
       } else if (sol && sol.mode === 'none') notaSoluzioneNonEseguibile(st, sol);
     }
     if (isMobile()) { dock.setMobileTab('console'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+    else dock.activateOrInsert('console');   /* v20 · the traceback lands in front on the single tab bar */
   }
   saveProgress();
   dock.refreshPanels(['console', 'esercizio', 'progressi']);
@@ -1608,6 +1686,7 @@ async function eseguiProgetto(e, st, mod) {
   if (run.game) {
     toast((mod ? '⌨ modified version — ' : '') + '🎮 Game started: play it in the <b>Game</b> panel (arrows/space/q), "■ Stop" to close it.', 'ok');
     if (isMobile()) { dock.setMobileTab('gioco'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+    else dock.activateOrInsert('gioco');   /* v20 · same landing on the single tab bar */
   } else if (res.ok) {
     const soAll = e.steps.flatMap(s => s.so || []);
     const ver = verificaOutput(soAll, res.output || '');
@@ -1617,13 +1696,16 @@ async function eseguiProgetto(e, st, mod) {
     if (run.chart && !outputUtile(res.output).trim()) {
       toast((mod ? '⌨ modified version — ' : '') + '📊 The program drew a chart: open the <b>Charts</b> panel to see it.', 'ok');
       if (isMobile()) { dock.setMobileTab('grafici'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+      else dock.activateOrInsert('grafici');   /* v20 · same landing on the single tab bar */
     } else {
       toast((mod ? '⌨ modified version — ' : '') + 'full program run (' + nFile + ' files): output in the <b>Console</b> tab.', 'ok');
       if (isMobile()) { dock.setMobileTab('console'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+      else dock.activateOrInsert('console');   /* v20 · same landing on the single tab bar */
     }
   } else {
     toast((mod ? '⌨ modified version — ' : '') + 'execution error: open the Console for the translated traceback.', 'err');
     if (isMobile()) { dock.setMobileTab('console'); dock.renderMobilePanel(); dock.renderMobileNav(); }
+    else dock.activateOrInsert('console');   /* v20 · same landing on the single tab bar */
   }
   saveProgress();
   dock.refreshPanels(['console', 'esercizio', 'progressi']);
@@ -1682,6 +1764,7 @@ async function eseguiSoluzione(e, sol, st, automatica, nomeMancante) {
       : `🧰 Your code doesn't produce output yet (it only defines classes/functions): the full solution ${dove}.`)
     : `📚 Solution run: ${run.game ? 'game in the <b>Game</b> panel, output in the Console.' : (run.chart && !outputUtile(run.out).trim() ? 'chart in the <b>Charts</b> panel.' : 'output in the Console.')}`, 'ok');
   if (isMobile()) { dock.setMobileTab(run.game ? 'gioco' : (run.chart && !outputUtile(run.out).trim() ? 'grafici' : 'console')); dock.renderMobilePanel(); dock.renderMobileNav(); }
+  else dock.activateOrInsert(run.game ? 'gioco' : (run.chart && !outputUtile(run.out).trim() ? 'grafici' : 'console'));   /* v20 · same landing on the single tab bar */
   saveProgress(); dock.refreshPanels(['console', 'esercizio', 'progressi']); renderStatus();
 }
 /* ---------- EXERCISE panel ---------- */
@@ -3280,29 +3363,14 @@ function mobileHeadHtml() {
 
 /* ---------- default layout and panel registry ---------- */
 function defaultLayout() {
-  /* ===== CHANGED v16.2 · no more left column: the Modules tree moved to
-       the slide-out drawer, the Guide to the overlay, and the Walkthrough
-       tab is GONE (its content lives inside the Exercise panel), so the
-       exercise starts full-width. Layout (unchanged otherwise):
-         ┌────────────────────────────┐
-         │          Exercise           │  70%
-         ├───────────────┬────────────┤
-         │ Console Charts │   Code     │  30%
-         │ Game  Progress │   Lines    │
-         └───────────────┴────────────┘ ===== */
-  return {
-    type: 'split', dir: 'col', sizes: [70, 30], children: [
-      { type: 'group', tabs: ['esercizio'], active: 'esercizio' },
-      {   // ===== MODIFIED v12 · the editors (⌨ full Code + ✎ Lines) in a
-          // separate tab, split from the Console/Charts/Game: they open and
-          // close on their own (activity bar) without covering the output =====
-        type: 'split', dir: 'row', sizes: [55, 45], children: [
-          { type: 'group', tabs: ['console', 'grafici', 'gioco', 'progressi'], active: 'console' },
-          { type: 'group', tabs: ['codice', 'righe'], active: 'codice' }
-        ]
-      }
-    ]
-  };
+  /* ===== CHANGED v20 · ONE TAB: the workbench starts with a single
+       Exercise tab — the homepage presents the site, and the first
+       click enters a clean, full-width workspace. Every other panel
+       joins THIS tab bar when it is opened (activity bar, status
+       chips, the Charts/Game switch of a run): the single-bar view is
+       the privileged layout, and side-by-side stays the explicit
+       drag gesture (left/right zone of a group wide enough). ===== */
+  return { type: 'group', tabs: ['esercizio'], active: 'esercizio' };
 }
 const Panels = {
   /* ===== REMOVED v16.2 · 'traccia' (Walkthrough): the statement and the
@@ -3545,6 +3613,12 @@ function init() {
   document.addEventListener('scroll', ev => {
     const t = ev.target;
     if (!(t instanceof Element) || !t.matches(SCROLLABLE_SEL)) return;
+    /* ===== CHANGED v20 · the header NEVER auto-hides while the Guide, the
+       Settings overlay or the Modules drawer is open. Scrolling inside
+       those surfaces used to slide the titlebar away, and closing them
+       left it hidden with nothing to scroll back up (the "header that
+       never returns" bug). Any scroll there now keeps it visible. ===== */
+    if (OVL.open || STG.open || DRAWER.open) { document.body.classList.remove('head-off'); return; }
     const y = t.scrollTop, last = lastScrollPos.get(t) || 0;
     lastScrollPos.set(t, y);
     if (y > last + 6 && y > 48) document.body.classList.add('head-off');
@@ -3555,23 +3629,39 @@ function init() {
   const headBack = () => document.body.classList.remove('head-off');
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape') headBack(); }, true);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', headBack);
-  if (!storage.getSeen()) {
-    /* ===== CHANGED v16 · on a phone the six toast cascade over 23 s
-       felt like a pop-up storm: two compact ones are enough. Desktop
-       keeps the full tour, updated for the new UI. ===== */
-    if (isMobile()) {
-      setTimeout(() => toast('👋 Welcome! Tap <b>☰</b> to pick an exercise, <b>?</b> if you get lost.', ''), 800);
-      setTimeout(() => toast('The <b style="color:var(--acc)">blue words</b> are your hints 🪂 · ▶ <b>Run</b> executes real Python.', ''), 5200);
-    } else {
-      setTimeout(() => toast('👋 Welcome! Open an exercise from the <b>☰ Modules</b> menu on the left.', ''), 800);
-      setTimeout(() => toast('The <b style="color:var(--acc)">blue words</b> in the phrases are clickable: they are your hints 🪂'), 5200);
-      setTimeout(() => toast('▶ The <b>Run</b> button runs the code with a real Python in the browser.', ''), 9600);
-      setTimeout(() => toast('🖼 Matplotlib/Plotly charts and 🎮 Pygame games appear in their dedicated panels!', ''), 14000);
-      setTimeout(() => toast('⌨ The <b>code</b> button next to Run shows the full program: you can modify it and run your version again.', ''), 18400);
-      setTimeout(() => toast('✎ The <b>lines</b> button opens the lightweight editor: only the exercise lines, with the reference to the module that contains them.', ''), 23000);
-    }
-    storage.setSeen();
+  /* ===== NEW v20 · HOMEPAGE wiring: the CTAs dismiss the presentation
+     and enter the workbench; Enter/Esc work as a keyboard shortcut
+     (Enter on a focused CTA is left to the button itself, so "Browse"
+     still opens the Modules drawer). The Resume button appears only
+     when there is a real exercise to resume. ===== */
+  const hpStart = document.getElementById('hpStart');
+  const hpBrowse = document.getElementById('hpBrowse');
+  const hpResume = document.getElementById('hpResume');
+  if (hpStart) hpStart.addEventListener('click', () => enterApp());
+  if (hpBrowse) hpBrowse.addEventListener('click', () => enterApp('browse'));
+  if (hpResume) hpResume.addEventListener('click', () => enterApp());
+  /* ===== CHANGED v20 · same-session reload: the bootstrap script in
+     <head> already hid #homePage before the first paint (data-skip-home);
+     here the state catches up — the node is dropped, HOME is marked as
+     entered and no stray Enter can re-trigger anything. ===== */
+  if (document.documentElement.hasAttribute('data-skip-home')) {
+    HOME.entered = true;
+    const hp0 = document.getElementById('homePage');
+    if (hp0) hp0.remove();
   }
+  if (hpResume) {
+    const e = EX[S.current];
+    if (e && S.current !== '2-1') {
+      hpResume.hidden = false;
+      hpResume.innerHTML = '↩ Resume «' + esc(e.id) + ' · ' + esc(e.t) + '»';
+    }
+  }
+  document.addEventListener('keydown', ev => {
+    if (HOME.entered) return;
+    if (ev.key !== 'Enter' && ev.key !== 'Escape') return;
+    if (ev.key === 'Enter' && ev.target && ev.target.closest && ev.target.closest('#homePage button')) return;
+    enterApp();
+  }, true);
 }
 if (typeof document !== 'undefined' && document.readyState !== 'loading') init();
 else if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', init);

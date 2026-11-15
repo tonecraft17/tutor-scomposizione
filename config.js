@@ -85,7 +85,7 @@ export const SOLUTIONS = {
 export const KEYS = {
   progress: 'tutorProgress',
   current: 'tutorCurrent',
-  layout: 'tutorLayoutV12',   // ===== CHANGED v12 · new default layout: ⌨/✎ editor in its own tab (split from the console) =====
+  layout: 'tutorLayoutV20',   // ===== CHANGED v20 · new key, new start: ONE tab (Exercise) — the homepage presents the site and the workbench opens with a single tab bar. Old keys are ignored (no vertical stacks can come back from an old save). =====
   seen: 'tutorSeen',
   /* ===== NEW v17 · Settings overlay state: the UI theme ('dark' default or
      'light' — styles-light.css is scoped under [data-theme="light"]) and the

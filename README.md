@@ -20,6 +20,7 @@ study an exercise → break it down into steps → write the lines → really ru
 - **Account in the top-right corner** (v17): avatar + exercises-completed counter; a click opens the summary popover (progress, autonomy, sync) with the “edit” bridge to Settings.
 - **No build step, no npm dependencies**: native ES modules + CSS. Serve it with any static server.
 - **Cookie notice + SEO** (v19): a one-time honest banner (no cookies, no tracking — progress lives in localStorage), canonical URL, Open Graph/Twitter cards with a custom `assets/og-image.png`, JSON-LD `WebApplication` data, `robots.txt` and `sitemap.xml` for Google indexing.
+- **Presentation homepage + one tab bar** (v20): a static, crawlable homepage presents the site (hero, feature cards, Start/Browse/Resume CTAs — a reload in the same session skips it with no flash); the workbench opens with **one Exercise tab** and every other panel **joins the same tab bar** — side-by-side is an explicit drag, never above/below, with a **320 px right-edge limit** that keeps columns readable; the auto-hiding header never disappears while Guide/Settings/Modules are open.
 
 ---
 

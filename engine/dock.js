@@ -1,10 +1,16 @@
 /* ============================================================
    ENGINE/DOCK · movable VS Code-style panels
    ------------------------------------------------------------
-   - split tree (row/column) with groups of tabs
+   - split tree with groups of tabs (v20 · ROW splits only: a tab
+     can never land above or below another one, and legacy column
+     layouts are flattened into ONE tab bar on load)
    - tab dragging with ghost and 3 docking zones (left / center /
-     right — side by side ONLY, v19: a tab can never land above or
-     below another one)
+     right — side by side ONLY)
+   - v20 · single-bar-by-default: reopening a panel from the
+     activity bar JOINS the existing tab bar; a side-by-side split
+     is an explicit drag onto a group that is wide enough
+   - v20 · right-edge limit: MIN_PANEL_PX — no split, no gutter
+     drag and no redistribution may squeeze a column below it
    - resize gutters
    - layout persistence on localStorage
    - activity bar, mobile view with single tabs
@@ -102,14 +108,19 @@ export function createDock(opts){
      opened from the mobile header. (v19 · sandbox removed from More.) ===== */
   const MOBILE_MAIN = ['esercizio','console','grafici','gioco'];
   const MOBILE_MORE = ['codice','righe','progressi','account'];
-  /* ===== CHANGED v19 · SIDE-BY-SIDE ONLY: every closed panel reopened
-     from the activity bar docks to the RIGHT of the work area (or joins
-     an existing tab bar). No panel is ever inserted above or below
-     another one anymore — 'bottom' is gone, matching the drag zones. ===== */
-  const OPEN_ZONES = { esercizio:'right',
-                       codice:'right',
-                       righe:'right',
-                       console:'right', grafici:'right', gioco:'right', progressi:'right', account:'right' };
+  /* ===== CHANGED v20 · ONE TAB BAR BY DEFAULT (single view privileged):
+     a closed panel reopened from a button (activity bar, status chips,
+     the Charts/Game switch of a run) is ADDED TO THE EXISTING TAB BAR —
+     'center' for everyone, no exceptions. Putting a panel BESIDE another
+     one stays possible, but only as the explicit gesture of dragging its
+     tab onto the left/right zone of a group wide enough to be split. ===== */
+  /* ===== NEW v20 · RIGHT-EDGE LIMIT: a column of a side-by-side split can
+     never be narrower than this. It gates (1) the creation of a new split
+     (the target group must be at least twice as wide), (2) the resize
+     gutters and (3) ensurePanelSpace's redistribution — so however many
+     panels are opened, tabs never get squashed against the right margin
+     of the screen. ===== */
+  const MIN_PANEL_PX = 320;
 
   let GIDSEQ=0, layout=null, DRAG=null, mobileTab='esercizio';
 
@@ -161,6 +172,20 @@ export function createDock(opts){
       g.tabs = g.tabs.filter(pid => panels[pid]);
       if(!g.tabs.includes(g.active)) g.active = g.tabs[0] || null;
     });
+    /* ===== NEW v20 · NO VERTICAL STACKS ON LOAD: a layout saved by an
+       older version could still contain a column split (a group living
+       BELOW another one). Any such tree is migrated to ONE tab bar with
+       all the panels in reading order — tabs never appear under other
+       tabs again, and the saved layout is rewritten the new shape. ===== */
+    if(treeHasCol(layout)){
+      const flat = { type:'group', tabs:[], active:null };
+      flattenInto(layout, flat);
+      flat.tabs = flat.tabs.filter(pid => panels[pid]);
+      if(!flat.active || !flat.tabs.includes(flat.active))
+        flat.active = flat.tabs.includes('esercizio') ? 'esercizio' : (flat.tabs[0] || null);
+      layout = flat;
+      saveLayoutSoon();
+    }
     layout = simplify(layout) || defaultLayout();
     root.appendChild(renderNode(layout));
     /* ===== CHANGED v15 · PERFORMANCE: panel bodies render PROGRESSIVELY.
@@ -300,7 +325,13 @@ export function createDock(opts){
       const move = ev=>{
         const cur = horiz ? ev.clientX : ev.clientY;
         const d = (cur-start)/total*100;
-        let a=s0[i]+d, b=s0[i+1]-d; const min=6;
+        /* ===== CHANGED v20 · the resize floor is PIXEL-based on horizontal
+           splits: a column can never be dragged below MIN_PANEL_PX, so the
+           side-by-side areas stay readable however many are open. (Column
+           splits no longer exist; the vertical case keeps a small floor
+           just for safety.) ===== */
+        const min = horiz ? Math.max(6, MIN_PANEL_PX/total*100) : Math.max(6, 110/total*100);
+        let a=s0[i]+d, b=s0[i+1]-d;
         if(a<min){ a=min; b=s0[i]+s0[i+1]-min; }
         if(b<min){ b=min; a=s0[i]+s0[i+1]-min; }
         split.sizes[i]=a; split.sizes[i+1]=b;
@@ -376,6 +407,17 @@ export function createDock(opts){
     movePanel(pid, targetNode, zone);
   }
   function movePanel(pid, targetGroup, zone){
+    /* ===== NEW v20 · RIGHT-EDGE LIMIT: a side-by-side split is created
+       only when the target group is at least TWICE the minimum column
+       width; anything narrower gets the tab ADDED to the same bar (which
+       scrolls horizontally) instead of a squashed extra column. ===== */
+    if(zone!=='center' && targetGroup && targetGroup._el){
+      const w = targetGroup._el.getBoundingClientRect().width;
+      if(w < MIN_PANEL_PX*2){
+        zone='center';
+        toast('Not enough room for another column — "'+panels[pid].title+'" joined this tab bar.', '');
+      }
+    }
     removePanelFromTree(pid);
     layout = simplify(layout);
     if(!layout){ layout={type:'group', tabs:[pid], active:pid}; }
@@ -394,14 +436,23 @@ export function createDock(opts){
     saveLayoutSoon();
   }
   function groupInTree(node, g){ return !!walkFind(node, n=>n===g); }
+  /* ===== CHANGED v20 · 'top'/'bottom' zones are gone (side-by-side
+     only), so the walk is a plain left/right descent of row splits. ===== */
   function nearestGroup(node, zone){
     let n=node;
     while(n.type==='split'){
-      const last = (zone==='right'||zone==='bottom');
-      const aligned = (n.dir==='row'&&(zone==='left'||zone==='right')) || (n.dir==='col'&&(zone==='top'||zone==='bottom'));
+      const last = zone==='right';
+      const aligned = n.dir==='row';
       n = aligned ? (last?n.children[n.children.length-1]:n.children[0]) : n.children[last?n.children.length-1:0];
     }
     return n.type==='group' ? n : null;
+  }
+  /* v20 · helpers of the no-vertical-stacks migration (see renderLayout) */
+  function treeHasCol(n){ if(!n) return false; if(n.type==='split') return n.dir==='col' || n.children.some(treeHasCol); return false; }
+  function flattenInto(n, acc){
+    if(!n) return;
+    if(n.type==='group'){ n.tabs.forEach(pid=>{ if(!acc.tabs.includes(pid)) acc.tabs.push(pid); }); if(!acc.active) acc.active=n.active; return; }
+    n.children.forEach(c=>flattenInto(c, acc));
   }
   function removePanelFromTree(pid){
     const g=findGroupOf(layout, pid); if(!g) return;
@@ -409,9 +460,12 @@ export function createDock(opts){
     if(g.active===pid) g.active=g.tabs[0]||null;
   }
   function insertSplit(pid, targetGroup, zone){
+    /* ===== CHANGED v20 · the direction is ALWAYS 'row': the only zones
+       left are left/right, so a column split — a tab landing above or
+       below another one — can no longer be built, by drag or by code. ===== */
     const ng={type:'group', tabs:[pid], active:pid};
-    const dir=(zone==='left'||zone==='right')?'row':'col';
-    const before=(zone==='left'||zone==='top');
+    const dir='row';
+    const before=(zone==='left');
     const r=findParentOf(layout, targetGroup, null);
     const parent=r.found?r.parent:null;
     if(!parent){
@@ -480,14 +534,15 @@ export function createDock(opts){
     const g=findGroupOf(layout, pid);
     if(g){ if(g.active!==pid){ g.active=pid; } renderLayout(); saveLayoutSoon(); }
     else{
-      const zone=OPEN_ZONES[pid]||'center';
-      const anchor=nearestGroup(layout, zone) || layout;
-      if(anchor.type==='group'){
-        if(zone==='center'||anchor===layout){ anchor.tabs.push(pid); anchor.active=pid; }
-        else insertSplit(pid, anchor, zone);
-      }
+      /* ===== CHANGED v20 · ADD TO THE EXISTING TAB BAR: no panel ever
+         splits the work area when it is (re)opened from a button — the
+         single-bar view is the privileged layout, and side-by-side is
+         the explicit drag gesture. ===== */
+      let bar = (layout.type==='group' && layout) || nearestGroup(layout, 'center');
+      if(!bar || bar.type!=='group') bar = layout = { type:'group', tabs:[], active:null };
+      bar.tabs.push(pid); bar.active=pid;
       renderLayout(); saveLayoutSoon();
-      toast('Panel "'+panels[pid].title+'" reopened.');
+      toast('Panel "'+panels[pid].title+'" added to the tab bar.');
     }
     /* v15 · the panel the user asked for is rendered right away: the
        progressive scheduler would otherwise give it its LCP-priority turn */
@@ -516,7 +571,11 @@ export function createDock(opts){
     if(wantPct <= parent.sizes[i]) return false;
     const delta = wantPct - parent.sizes[i];
     const otherSum = parent.sizes.reduce((a,v,j)=> j===i ? a : a+v, 0);
-    const minFrat = 6, nFrat = parent.children.length-1;
+    /* ===== CHANGED v20 · the siblings' floor is the SAME pixel-based
+       minimum the gutters enforce (MIN_PANEL_PX on row splits): a
+       redistribution can no longer squeeze a neighbouring column into
+       an unreadable strip. ===== */
+    const minFrat = Math.max(6, (verticale ? 110 : MIN_PANEL_PX) / total * 100), nFrat = parent.children.length-1;
     if(otherSum - delta < minFrat*nFrat) return false;   // not enough space: don't force
     parent.sizes = parent.sizes.map((v,j)=>{
       if(j===i) return wantPct;

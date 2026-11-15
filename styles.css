@@ -118,8 +118,10 @@ svg.ic {
   user-select: none;
   /* ===== NEW v16.1 · auto-hide on scroll: scrolling DOWN inside any panel
      slides the bar away (the work area grows by its 38px); scrolling UP
-     brings it back. The class is toggled by the scroll watcher in app.js. ===== */
-  transition: margin-top .26s ease, opacity .26s ease;
+     brings it back. The class is toggled by the scroll watcher in app.js.
+     ===== CHANGED v20 · smoother: a touch longer, decelerating curve —
+     the slide reads as one fluid gesture instead of a snap. ===== */
+  transition: margin-top .32s cubic-bezier(.4, 0, .2, 1), opacity .32s cubic-bezier(.4, 0, .2, 1);
   position: relative;
   z-index: 30;
 }
@@ -2277,7 +2279,8 @@ body.mobile .titlebar {
   user-select: none;
   position: relative;   /* v16.1 · stays above the drawer */
   z-index: 1002;
-  transition: margin-top .26s ease, opacity .26s ease
+  /* ===== CHANGED v20 · same smoother curve as the desktop titlebar ===== */
+  transition: margin-top .32s cubic-bezier(.4, 0, .2, 1), opacity .32s cubic-bezier(.4, 0, .2, 1)
 }
 
 .m-head .m-brand {
@@ -4501,5 +4504,275 @@ textarea:hover,
     bottom: 12px;
     left: 10px;
     right: 10px
+  }
+}
+
+/* ============================================================
+   ===== NEW v20 · HOMEPAGE (presentation of the site) =====
+   ------------------------------------------------------------
+   Full-viewport section that covers the app shell until the visitor
+   enters (enterApp() in app.js). It is plain static markup: it paints
+   in the first frame (it IS the landing LCP) and doubles as crawlable
+   content for the search engines. A session that already entered
+   never sees it again (html[data-skip-home], set in <head> before the
+   CSS parses — no flash). Staggered entrance, hover motion on every
+   card and button: the page is alive but calm. Light theme overrides
+   live at the end of styles-light.css.
+   ============================================================ */
+#homePage {
+  position: fixed;
+  inset: 0;
+  z-index: 1150;      /* above the app chrome; below toasts (1200) and the cookie bar (1500) */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 22px;
+  background:
+    radial-gradient(1100px 520px at 82% -12%, rgba(79, 156, 247, .16), transparent 62%),
+    radial-gradient(900px 440px at -12% 112%, rgba(126, 231, 135, .06), transparent 55%),
+    #17181c;
+  transition: opacity .42s ease, transform .42s ease;
+}
+
+/* enterApp() adds .away: the page lets go with a soft zoom, then the
+   node is removed from the DOM (no display:none flip mid-transition) */
+#homePage.away {
+  opacity: 0;
+  transform: scale(1.015);
+  pointer-events: none
+}
+
+/* the same-session skip: set on <html> by the bootstrap script in
+   <head>, before this stylesheet is parsed — never painted */
+html[data-skip-home] #homePage {
+  display: none
+}
+
+.hp-inner {
+  width: min(880px, 100%);
+  text-align: center
+}
+
+/* staggered entrance: hero first, cards last — one calm cascade */
+.hp-inner>* {
+  animation: hpIn .55s cubic-bezier(.22, .86, .3, 1) backwards
+}
+
+.hp-inner>*:nth-child(2) {
+  animation-delay: .07s
+}
+
+.hp-inner>*:nth-child(3) {
+  animation-delay: .12s
+}
+
+.hp-inner>*:nth-child(4) {
+  animation-delay: .18s
+}
+
+.hp-inner>*:nth-child(5) {
+  animation-delay: .22s
+}
+
+.hp-inner>*:nth-child(6) {
+  animation-delay: .28s
+}
+
+.hp-inner>*:nth-child(7) {
+  animation-delay: .34s
+}
+
+@keyframes hpIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px)
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hp-inner>* {
+    animation: none
+  }
+}
+
+.hp-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: .78125rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  color: var(--dim)
+}
+
+.hp-brand svg {
+  width: 20px;
+  height: 20px
+}
+
+.hp-title {
+  margin: 20px 0 14px;
+  font-size: clamp(2.1rem, 6vw, 3.3rem);
+  line-height: 1.07;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--text)
+}
+
+.hp-title em {
+  font-style: normal;
+  background: linear-gradient(92deg, #4f9cf7, #7ee787);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent
+}
+
+.hp-sub {
+  max-width: 640px;
+  margin: 0 auto 28px;
+  color: var(--dim);
+  font-size: .9375rem;
+  line-height: 1.75
+}
+
+.hp-sub b {
+  color: var(--text)
+}
+
+.hp-cta {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px
+}
+
+.hp-btn {
+  appearance: none;
+  border: 1px solid var(--border2);
+  background: var(--panel2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  font-size: .875rem;
+  padding: 12px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform .2s cubic-bezier(.4, 0, .2, 1), box-shadow .2s, border-color .2s, background .2s
+}
+
+.hp-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--acc-line);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .35)
+}
+
+.hp-btn:active {
+  transform: translateY(0)
+}
+
+.hp-btn.primary {
+  background: linear-gradient(135deg, #4f9cf7, #3d7fd9);
+  border-color: transparent;
+  color: #0d1117
+}
+
+.hp-btn.primary:hover {
+  box-shadow: 0 12px 30px rgba(79, 156, 247, .35)
+}
+
+.hp-btn.resume {
+  border-style: dashed
+}
+
+.hp-facts {
+  margin-bottom: 36px;
+  color: var(--faint);
+  font-size: .75rem;
+  letter-spacing: .03em
+}
+
+.hp-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  text-align: left
+}
+
+.hp-card {
+  background: rgba(255, 255, 255, .028);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 17px 16px 15px;
+  transition: transform .22s cubic-bezier(.4, 0, .2, 1), border-color .22s, background .22s
+}
+
+.hp-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--acc-line);
+  background: rgba(79, 156, 247, .07)
+}
+
+.hp-card h2 {
+  margin: 9px 0 6px;
+  font-size: .84375rem;
+  color: var(--text)
+}
+
+.hp-card p {
+  margin: 0;
+  font-size: .78125rem;
+  line-height: 1.65;
+  color: var(--dim)
+}
+
+.hp-ic {
+  display: block;
+  font-size: 1.3rem;
+  line-height: 1
+}
+
+.hp-foot {
+  margin-top: 32px;
+  color: var(--faint);
+  font-size: .75rem;
+  letter-spacing: .06em
+}
+
+.hp-nojs {
+  margin: 18px auto 0;
+  max-width: 520px;
+  padding: 12px 16px;
+  border: 1px dashed var(--border2);
+  border-radius: 12px;
+  color: var(--dim);
+  font-size: .8125rem
+}
+
+@media (max-width: 900px) {
+  .hp-grid {
+    grid-template-columns: repeat(2, 1fr)
+  }
+}
+
+@media (max-width: 560px) {
+  #homePage {
+    padding: 24px 16px;
+    align-items: flex-start
+  }
+
+  .hp-grid {
+    grid-template-columns: 1fr
+  }
+
+  .hp-title {
+    font-size: 2rem
+  }
+
+  .hp-btn {
+    width: 100%
   }
 }
