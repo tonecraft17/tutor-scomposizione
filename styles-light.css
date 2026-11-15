@@ -449,26 +449,54 @@ html[data-theme="light"] .console-out .run-block.sol {
 }
 
 /* ============================================================
-   ===== NEW v20 · HOMEPAGE, light edition =====
+   ===== CHANGED v21 · HOMEPAGE (light) — second round =====
    ------------------------------------------------------------
-   The presentation page follows the app theme: cream background,
-   soft pastel glows, white cards. The CTA keeps the blue gradient
-   (it reads well on cream); the hero gradient gets deeper hues for
+   The kinetic homepage in the light theme: cream background, white
+   cards, softer blobs. The terminal card stays BLACK (a terminal is
+   dark in any theme) and the hero gradient gets deeper hues for
    contrast on the light surface.
    ============================================================ */
 html[data-theme="light"] #homePage {
   background:
-    radial-gradient(1100px 520px at 82% -12%, rgba(79, 156, 247, .14), transparent 62%),
-    radial-gradient(900px 440px at -12% 112%, rgba(246, 165, 175, .16), transparent 55%),
+    radial-gradient(1100px 520px at 82% -12%, rgba(79, 156, 247, .12), transparent 62%),
     var(--bg);
 }
 
-html[data-theme="light"] .hp-title em {
-  background: linear-gradient(92deg, #2f7de1, #c935b0);
+html[data-theme="light"] .hp-blob.b1 {
+  background: radial-gradient(circle at 40% 40%, rgba(79, 156, 247, .17), transparent 68%)
+}
+
+html[data-theme="light"] .hp-blob.b2 {
+  background: radial-gradient(circle at 55% 45%, rgba(246, 165, 175, .15), transparent 66%)
+}
+
+html[data-theme="light"] .hp-blob.b3 {
+  background: radial-gradient(circle at 50% 50%, rgba(188, 140, 255, .13), transparent 68%)
+}
+
+html[data-theme="light"] .hp-tok {
+  color: rgba(47, 125, 225, .32)
+}
+
+html[data-theme="light"] .hp-tok:nth-child(even) {
+  color: rgba(28, 142, 96, .30)
+}
+
+html[data-theme="light"] .hp-tok:nth-child(3n) {
+  color: rgba(169, 87, 204, .28)
+}
+
+/* the decomposed word keeps a readable gradient on cream */
+html[data-theme="light"] .lt {
+  background: linear-gradient(92deg, #2f7de1, #1c8e60);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent
+}
+
+html[data-theme="light"] .hp-dot {
+  color: #6d6a86
 }
 
 html[data-theme="light"] .hp-card {
@@ -481,6 +509,32 @@ html[data-theme="light"] .hp-card:hover {
   background: #ffffff;
   border-color: var(--acc-line);
   box-shadow: 0 14px 30px rgba(58, 48, 92, .16)
+}
+
+/* the illustration frames get a light surface too (the terminal
+   inside stays black) */
+html[data-theme="light"] .hp-ill {
+  background: #f4f0e9;
+  border-color: rgba(58, 48, 92, .10)
+}
+
+html[data-theme="light"] .chip {
+  background: #ffffff;
+  border-color: rgba(58, 48, 92, .16);
+  color: #4a4660
+}
+
+html[data-theme="light"] .stepline i {
+  background: rgba(58, 48, 92, .18)
+}
+
+html[data-theme="light"] .ghost {
+  background: linear-gradient(90deg, rgba(47, 125, 225, .5), rgba(28, 142, 96, .4));
+  opacity: .4
+}
+
+html[data-theme="light"] .rbg {
+  stroke: rgba(58, 48, 92, .14)
 }
 
 html[data-theme="light"] .hp-btn {

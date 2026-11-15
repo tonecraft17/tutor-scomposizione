@@ -1,7 +1,7 @@
 /* ============================================================
    APP · entry point: joins the modules and starts the app
    ============================================================ */
-/* ===== NEW v16.1 · every ES-module import now carries the same ?v=20
+/* ===== NEW v16.1 · every ES-module import now carries the same ?v=21
    query as the <script>/<link> tags in index.html. WHY: the service worker
    caches same-origin GETs by their FULL URL (query included), and the
    module files used to have NO version in their URL. On the first visit
@@ -13,21 +13,21 @@
    stale worker cache-misses and fetches the fresh, consistent set. The
    specifiers must stay character-for-character identical to the
    modulepreload hrefs in index.html, or each file would be fetched twice. ===== */
-import { APP, KEYS, supabaseConfigured, PLOTLY_JS } from './config.js?v=20';
-import { CH, EX, ORDER, TOTAL_EX, ROADMAP, codiceEsercizio } from './data/exercises.js?v=20';
-import { createDock, isMobile, icon } from './engine/dock.js?v=20';
+import { APP, KEYS, supabaseConfigured, PLOTLY_JS } from './config.js?v=21';
+import { CH, EX, ORDER, TOTAL_EX, ROADMAP, codiceEsercizio } from './data/exercises.js?v=21';
+import { createDock, isMobile, icon } from './engine/dock.js?v=21';
 import {
   stateFor, righeUtente, righeUtenteRaw, righeUtenteConCommenti, conRientro, checkStep, assistLabel, assistSummary,
   autonomiaOf, globalStats, nextExercise, verificaOutput
-} from './engine/tutor.js?v=20';
+} from './engine/tutor.js?v=21';
 import {
   runPythonCode, getStatus, onPythonStatus,
   onMatplotlibImage, onPlotlyFigure, onPygameFrame,
   onPythonRunEnd, sendPygameEvent, stopPygameGame
-} from './engine/python-runner.js?v=20'; // ===== MODIFIED =====
-import * as storage from './engine/storage.js?v=20';
-import * as solDb from './engine/solutions-db.js?v=20'; // ===== NEW · local solutions database =====
-import { PONTE } from './engine/ponte.js?v=20'; // ===== NEW v12.1 · bridge from exercise lines → project =====
+} from './engine/python-runner.js?v=21'; // ===== MODIFIED =====
+import * as storage from './engine/storage.js?v=21';
+import * as solDb from './engine/solutions-db.js?v=21'; // ===== NEW · local solutions database =====
+import { PONTE } from './engine/ponte.js?v=21'; // ===== NEW v12.1 · bridge from exercise lines → project =====
 
 /* ---------- UI utilities ---------- */
 const $ = s => document.querySelector(s);
@@ -60,7 +60,11 @@ function armAutogrow(ta, minH) {
    flag) keeps this safe at any evaluation order. ===== */
 const toastQueue = [];
 function toast(msg, type) {
-  if (document.getElementById('homePage')) { toastQueue.push([msg, type]); return; }
+  /* ===== CHANGED v21 · the homepage node now STAYS in the DOM (hidden)
+     so the ⌂ Home button can bring it back: the queue check is its
+     VISIBILITY, not its existence. ===== */
+  const hp = document.getElementById('homePage');
+  if (hp && !hp.hidden) { toastQueue.push([msg, type]); return; }
   const t = elHtml(`<div class="toast ${type || ''}">${msg}</div>`);
   $('#toasts').appendChild(t);
   setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 320); }, 3600);
@@ -280,35 +284,140 @@ function enterApp(action) {
   try { sessionStorage.setItem('tutorHomeDone', '1'); } catch (e) { }
   document.body.classList.add('in-app');
   const hp = document.getElementById('homePage');
-  /* the toasts that arrived while the presentation was up are released
-     right after the node is gone (toast() re-queues while it is still
-     in the DOM), so the visitor finds them waiting inside the app */
+  /* ===== CHANGED v21 · the node is HIDDEN, not removed: the ⌂ Home
+     button in the titlebar can bring the presentation back at any time
+     (goHome()). The workbench stays mounted underneath — no state is
+     lost, the panels keep their content. ===== */
   const flushToasts = () => toastQueue.splice(0).forEach(([m, t]) => toast(m, t));
-  if (hp) {
+  if (hp && !hp.hidden) {
     hp.classList.add('away');
-    setTimeout(() => { if (hp.parentNode) hp.remove(); flushToasts(); }, 540);
+    setTimeout(() => {
+      hp.classList.remove('away');
+      hp.hidden = true;
+      flushToasts();
+    }, 540);
   } else flushToasts();
   welcomeTour();
   if (action === 'browse') setTimeout(() => toggleDrawer(true), 580);   /* just after the homepage node is gone: the drawer slides over the workbench alone */
   const gs = $('#globalSearch');
   if (gs && !isMobile()) { try { gs.focus({ preventScroll: true }); } catch (e) { } }
 }
+/* ===== NEW v21 · ⌂ HOME: bring the presentation page back. The app
+   stays mounted (the homepage is a full-viewport cover): coming back
+   to the workbench is one “Start learning” away, and the session flag
+   is cleared so even a reload from here shows the presentation. ===== */
+function goHome() {
+  if (DRAWER.open) toggleDrawer(false);
+  if (OVL.open) toggleGuida(false);
+  if (STG.open) toggleImpostazioni(false);
+  if (ACCT.open) closeAccountPop();
+  const hp = document.getElementById('homePage');
+  if (!hp) return;
+  HOME.entered = false;
+  document.body.classList.remove('in-app', 'head-off');
+  try { sessionStorage.removeItem('tutorHomeDone'); } catch (e) { }
+  hp.hidden = false;
+  hp.scrollTop = 0;
+  /* restart the entrance cascade + re-arm the decorative FX */
+  armHomeFx(hp);
+  const first = hp.querySelector('.hp-btn');
+  if (first) { try { first.focus({ preventScroll: true }); } catch (e) { } }
+}
+/* ============================================================
+   ===== NEW v21 · armHomeFx() — the homepage motion layer =====
+   ------------------------------------------------------------
+   The presentation page ships as STATIC markup (crawlable, instant
+   first paint, fully readable with JS off). This function adds the
+   kinetic layer, and only when the page is actually on screen:
+   1. .hp-live on the section starts every CSS animation (entrance
+      cascade, floating letters, blobs, tokens, illustrations);
+   2. the hero word "apart" is split into per-letter spans — each one
+      keeps its own scatter rotation/offset and floats on its own
+      phase (the word literally never settles: it stays "taken
+      apart"); hovering it spreads the letters further apart;
+   3. an IntersectionObserver reveals the feature cards with a
+      stagger when they enter the viewport;
+   4. a light pointer parallax moves the background layers at two
+      different depths (desktop pointers only).
+   Everything is idempotent (it runs on first load and again every
+   time the ⌂ Home button comes back here) and respects
+   prefers-reduced-motion (the CSS switch kills the animations; the
+   parallax is skipped entirely).
+   ============================================================ */
+function armHomeFx(hp) {
+  if (!hp || hp.hidden) return;
+  const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* -- 2 · split "apart" into floating letter tiles ------------------ */
+  const letters = hp.querySelector('.hp-letters');
+  if (letters && !letters.dataset.split) {
+    letters.dataset.split = '1';
+    const txt = letters.textContent;
+    letters.textContent = '';
+    [...txt].forEach((ch, i) => {
+      const s = document.createElement('span');
+      s.className = 'lt';
+      s.textContent = ch;
+      s.style.setProperty('--i', i);
+      letters.appendChild(s);
+    });
+  }
+  /* -- 3 · cards: staggered reveal when they cross the viewport ------- */
+  if (!hp.dataset.io) {
+    hp.dataset.io = '1';
+    const cards = hp.querySelectorAll('.hp-card');
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(ents => {
+        ents.forEach(en => {
+          if (!en.isIntersecting) return;
+          const el = en.target;
+          io.unobserve(el);
+          /* small per-card stagger, in DOM order */
+          const idx = [...cards].indexOf(el);
+          setTimeout(() => el.classList.add('in'), Math.max(0, idx) * 90);
+        });
+      }, { root: hp, threshold: .18 });
+      cards.forEach(c => io.observe(c));
+    } else cards.forEach(c => c.classList.add('in'));
+  }
+  /* -- 4 · pointer parallax (two depths), desktop pointers only ------ */
+  if (!REDUCED && !hp.dataset.px && window.matchMedia('(pointer: fine)').matches) {
+    hp.dataset.px = '1';
+    let raf = 0;
+    hp.addEventListener('pointermove', ev => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const r = hp.getBoundingClientRect();
+        const x = (ev.clientX - r.left) / r.width - .5;    /* -0.5 … 0.5 */
+        const y = (ev.clientY - r.top) / r.height - .5;
+        hp.style.setProperty('--px', x.toFixed(3));
+        hp.style.setProperty('--py', y.toFixed(3));
+      });
+    });
+    hp.addEventListener('pointerleave', () => {
+      hp.style.setProperty('--px', '0');
+      hp.style.setProperty('--py', '0');
+    });
+  }
+  /* -- 1 · .hp-live restarts every animation from a clean slate ------- */
+  hp.classList.remove('hp-live');
+  void hp.offsetWidth;                    /* reflow: the cascade replays */
+  hp.classList.add('hp-live');
+}
 /* ===== CHANGED v20 · the welcome tour moved out of init(): the toasts
    must wait until the visitor ENTERS the app, not fire behind the
-   homepage that still covers the workbench. ===== */
+   homepage that still covers the workbench.
+   ===== CHANGED v21 · ONE toast, not six: the tour was a popup every
+   few seconds (welcome, hints, run, charts, code, lines…) — noise for
+   a visitor who just wants to start. The single welcome line points
+   at the two things a newcomer really needs (where the exercises are,
+   where the help is); the rest is discovered by using the app, and
+   the Guide overlay explains everything on demand. ===== */
 function welcomeTour() {
   if (storage.getSeen()) return;
-  if (isMobile()) {
-    setTimeout(() => toast('👋 Welcome! Tap <b>☰</b> to pick an exercise, <b>?</b> if you get lost.', ''), 800);
-    setTimeout(() => toast('The <b style="color:var(--acc)">blue words</b> are your hints 🪂 · ▶ <b>Run</b> executes real Python.', ''), 5200);
-  } else {
-    setTimeout(() => toast('👋 Welcome! Open an exercise from the <b>☰ Modules</b> menu on the left.', ''), 800);
-    setTimeout(() => toast('The <b style="color:var(--acc)">blue words</b> in the phrases are clickable: they are your hints 🪂'), 5200);
-    setTimeout(() => toast('▶ The <b>Run</b> button runs the code with a real Python in the browser.', ''), 9600);
-    setTimeout(() => toast('🖼 Matplotlib/Plotly charts and 🎮 Pygame games appear in their dedicated panels!', ''), 14000);
-    setTimeout(() => toast('⌨ The <b>code</b> button next to Run shows the full program: you can modify it and run your version again.', ''), 18400);
-    setTimeout(() => toast('✎ The <b>lines</b> button opens the lightweight editor: only the exercise lines, with the reference to the module that contains them.', ''), 23000);
-  }
+  setTimeout(() => toast(isMobile()
+    ? '👋 Welcome! Tap <b>☰</b> to pick an exercise, <b>?</b> if you get lost.'
+    : '👋 Welcome! Open an exercise from the <b>☰ Modules</b> menu on the left — <b>? Guide</b> if you get lost.', ''), 800);
   storage.setSeen();
 }
 
@@ -339,9 +448,9 @@ function applyTheme(name, opts = {}) {
     const b = shost.querySelector('.ovl-body');
     if (b) { renderImpostazioni(b); const x = shost.querySelector('.ovl-x'); if (x) x.focus(); }
   }
-  if (!opts.silent) toast(t === 'light'
-    ? '☀ Light theme on — terminals and code areas stay black.'
-    : '🌙 Dark theme on.', 'ok');
+  /* ===== CHANGED v21 · NO theme toast: the whole interface flips in
+     front of the user's eyes — a popup on top of it is noise. ===== */
+  if (!opts.silent) { /* silent by design */ }
 }
 
 /* ============================================================
@@ -875,9 +984,11 @@ onPygameFrame(({ buf, b64, w, h, gw, gh }) => {
        the remaining space (CSS max-height). */
     if (dock.ensurePanelSpace) dock.ensurePanelSpace('gioco', 420);
     dock.refreshPanels(['gioco']);     // after the widening the canvas must be recreated
+    /* ===== CHANGED v21 · shorter game-start toast: the Game tab is already
+       in front — only the controls are worth saying. ===== */
     toast(isMobile()
-      ? '🎮 Game started: play with the <b>on-screen pad</b> under the canvas. ■ Stop closes it.'
-      : '🎮 Game started: click the canvas in the <b>Game</b> panel (it captures the keyboard) and play with arrows/space/q. Press <b>■ Stop</b> to close it.', '');
+      ? '🎮 Game started: play with the <b>on-screen pad</b> · ■ Stop closes it.'
+      : '🎮 Game started: click the canvas, play with arrows / space / q · ■ Stop closes it.', '');
     if (isMobile()) { dock.setMobileTab('gioco'); dock.renderMobilePanel(); dock.renderMobileNav(); }
     else dock.activateOrInsert('gioco');   /* v20 · the single tab bar lands on the game too */
   }
@@ -1541,7 +1652,11 @@ async function eseguiEsercizio(e) {
   // (imported modules, CSV/TXT/JSON data, images of the Pygame projects…)
   const sol = await solDb.getSolution(e.id).catch(() => null);
   const vFiles = Object.assign({}, sol ? sol.files : {}, e.virtualFiles || {}, mod ? (st.customFiles || {}) : {}, studentFiles);
-  toast(getStatus().status === 'ready' ? 'Execution started…' : 'First run: downloading the Python runtime (~10 MB), only this time…', '');
+  /* ===== CHANGED v21 · "Execution started…" is gone (the outcome arrives
+     a moment later with its own feedback); ONLY the one-time runtime
+     download is announced, because it explains a long wait. ===== */
+  if (getStatus().status !== 'ready')
+    toast('First run: downloading the Python runtime (~10 MB), only this time…', '');
   const mediaBefore = snapMedia();
   // ===== NEW · test exercises (sol.mode === 'pytest'): the student's
   // code is run WITH pytest, so they see the results of their own tests
@@ -1593,12 +1708,16 @@ async function eseguiEsercizio(e) {
       toast('Program run with no output: so far you have only defined names (classes, functions, imports).', 'warn');
     } else {
       if (ver && ver.ok) toast((mod ? '⌨ modified version — ' : '') + '✓ Output verified: it matches the output expected by the book!', 'ok');
-      else if (mod) toast('⌨ Modified program run: output in the Console and in the Code editor.', 'ok');
+      else if (mod) toast('⌨ Your version ran — see the output in the Console.', 'ok');
       /* ===== NEW v16.1 · chart-only runs get their own message: the output
-         is not "missing", it lives in the Charts panel ===== */
+         is not "missing", it lives in the Charts panel
+         ===== CHANGED v21 · shorter (the tab bar already lands on the
+         chart: the toast confirms, it doesn't have to give directions). ===== */
       else if (run.chart && !outputUtile(res.output).trim())
-        toast((mod ? '⌨ modified version — ' : '') + '📊 The program drew a chart: open the <b>Charts</b> panel to see it.', 'ok');
-      else toast('Program run: open the Console for the output.', 'ok');
+        toast((mod ? '⌨ modified version — ' : '') + '📊 The program drew a chart.', 'ok');
+      /* ===== CHANGED v21 · the plain "open the Console" toast is GONE: since
+         v20 the tab bar lands on the panel that holds the result, so the
+         direction was already given — a toast on top of it was noise. ===== */
     }
     /* ===== CHANGED v16.1 · where the phone lands after the run: the panel
      that actually holds the result — the Game for a game, the Charts for a
@@ -1621,7 +1740,7 @@ async function eseguiEsercizio(e) {
     if (isMobile()) { dock.setMobileTab('gioco'); dock.renderMobilePanel(); dock.renderMobileNav(); }
     else dock.activateOrInsert('gioco');   /* v20 · same landing on the single tab bar */
   } else {
-    toast('Execution error: open the Console for the translated traceback.', 'err');
+    toast('Execution error — see the Console for the translated traceback.', 'err');
     // ===== NEW · fragments that modify larger programs =====
     // If the student's code falls on a NameError (a name never defined in
     // this fragment) and the exercise has a runnable solution, the
@@ -1670,7 +1789,9 @@ async function eseguiProgetto(e, st, mod) {
     return;
   }
   const vFiles = Object.assign({}, files); delete vFiles['main.py'];
-  toast(getStatus().status === 'ready' ? 'Execution started…' : 'First run: downloading the Python runtime (~10 MB), only this time…', '');
+  /* ===== CHANGED v21 · same quiet-start rule as the main run. ===== */
+  if (getStatus().status !== 'ready')
+    toast('First run: downloading the Python runtime (~10 MB), only this time…', '');
   const mediaBefore = snapMedia();
   const res = await runPythonCode(code, vFiles, { mode: sol.mode, entry });
   if (res.busy) { toast(res.error && res.error.hint || 'A run is already in progress.', 'warn'); return; }
@@ -1684,7 +1805,9 @@ async function eseguiProgetto(e, st, mod) {
   }
   st.runs.push(run); st.runs = st.runs.slice(-12);
   if (run.game) {
-    toast((mod ? '⌨ modified version — ' : '') + '🎮 Game started: play it in the <b>Game</b> panel (arrows/space/q), "■ Stop" to close it.', 'ok');
+    /* ===== CHANGED v21 · shorter: the Game tab is already in front — the
+       toast just reminds the controls. ===== */
+    toast((mod ? '⌨ modified version — ' : '') + '🎮 Game started: arrows / space / q to play · ■ Stop closes it.', 'ok');
     if (isMobile()) { dock.setMobileTab('gioco'); dock.renderMobilePanel(); dock.renderMobileNav(); }
     else dock.activateOrInsert('gioco');   /* v20 · same landing on the single tab bar */
   } else if (res.ok) {
@@ -1694,16 +1817,16 @@ async function eseguiProgetto(e, st, mod) {
     /* ===== CHANGED v16.1 · chart-only project runs: message + phone
        landing panel follow the actual result (Charts), not the console ===== */
     if (run.chart && !outputUtile(res.output).trim()) {
-      toast((mod ? '⌨ modified version — ' : '') + '📊 The program drew a chart: open the <b>Charts</b> panel to see it.', 'ok');
+      toast((mod ? '⌨ modified version — ' : '') + '📊 The program drew a chart.', 'ok');
       if (isMobile()) { dock.setMobileTab('grafici'); dock.renderMobilePanel(); dock.renderMobileNav(); }
       else dock.activateOrInsert('grafici');   /* v20 · same landing on the single tab bar */
     } else {
-      toast((mod ? '⌨ modified version — ' : '') + 'full program run (' + nFile + ' files): output in the <b>Console</b> tab.', 'ok');
+      toast((mod ? '⌨ modified version — ' : '') + '✓ Full program run (' + nFile + ' files) — see the Console.', 'ok');
       if (isMobile()) { dock.setMobileTab('console'); dock.renderMobilePanel(); dock.renderMobileNav(); }
       else dock.activateOrInsert('console');   /* v20 · same landing on the single tab bar */
     }
   } else {
-    toast((mod ? '⌨ modified version — ' : '') + 'execution error: open the Console for the translated traceback.', 'err');
+    toast((mod ? '⌨ modified version — ' : '') + 'execution error — see the Console for the traceback.', 'err');
     if (isMobile()) { dock.setMobileTab('console'); dock.renderMobilePanel(); dock.renderMobileNav(); }
     else dock.activateOrInsert('console');   /* v20 · same landing on the single tab bar */
   }
@@ -3354,6 +3477,7 @@ function mobileHeadHtml() {
          old flat tab bar entries (they were always-visible tabs before).
          ===== CHANGED v18 · same single names as the sidebar buttons. ===== -->
     <button class="tl-btn" data-mact="moduli" title="Modules" aria-label="Open the modules menu" style="padding:5px 9px">☰</button>
+    <button class="tl-btn" data-mact="home" title="Home" aria-label="Back to the presentation page" style="padding:5px 9px">⌂</button>
     <button class="tl-btn" data-mact="guida" title="Guide" aria-label="Open the guide" style="padding:5px 9px">?</button>
     <button class="tl-btn" data-mact="account" title="Account" style="padding:5px 9px">☁</button>
     <!-- ===== NEW v17 · Settings on mobile too (theme, credentials, privacy):
@@ -3492,14 +3616,12 @@ function init() {
   // opens IndexedDB and migrates a v13 bulk seed if present. Each chapter's
   // files are imported on demand by the first getSolution() of that chapter
   // and seeded then — the toast below fires on those first-time downloads. =====
-  document.addEventListener('soldb:chapter', ev => {
-    toast(`📚 Chapter ${ev.detail.ch}: downloading its solution files (first time only)…`, '');
-  });
-  solDb.init().then(info => {
-    if (info && info.done) {
-      toast(`📚 Solutions database ready: ${info.count} exercises — chapter files load on demand.`, 'ok');
-    }
-  }).catch(() => { toast('⚠ Solutions database unavailable: running without support files.', 'warn'); });
+  // ===== CHANGED v21 · the chapter download and the "database ready"
+  // toasts are GONE: they are background work the visitor cannot act on
+  // ("reduce or eliminate popups like solution files…"). Only a real
+  // failure stays visible. =====
+  document.addEventListener('soldb:chapter', () => { /* quiet */ });
+  solDb.init().catch(() => { toast('⚠ Solutions database unavailable: running without support files.', 'warn'); });
   onPythonStatus(() => { renderStatus(); });
   storage.onSyncChange(() => { renderStatus(); });
   /* ===== NEW v18 · Supabase health check (see engine/storage.js): a
@@ -3592,6 +3714,7 @@ function init() {
        overlay; the cloud button still switches to the Account tab.
        ===== NEW v17 · ⚙ opens the Settings overlay. ===== */
     if (t.dataset.mact === 'moduli') toggleDrawer();
+    else if (t.dataset.mact === 'home') goHome();
     else if (t.dataset.mact === 'guida') toggleGuida();
     else if (t.dataset.mact === 'account') { dock.setMobileTab('account'); dock.renderMobilePanel(); dock.renderMobileNav(); }
     else if (t.dataset.mact === 'impostazioni') toggleImpostazioni();
@@ -3629,25 +3752,31 @@ function init() {
   const headBack = () => document.body.classList.remove('head-off');
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape') headBack(); }, true);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', headBack);
-  /* ===== NEW v20 · HOMEPAGE wiring: the CTAs dismiss the presentation
-     and enter the workbench; Enter/Esc work as a keyboard shortcut
-     (Enter on a focused CTA is left to the button itself, so "Browse"
-     still opens the Modules drawer). The Resume button appears only
-     when there is a real exercise to resume. ===== */
+  /* ===== CHANGED v21 · HOMEPAGE wiring: ONE CTA (▶ Start learning) plus
+     the contextual ↩ Resume — the "Browse the 199 exercises" button is
+     gone (start IS browsing, one click later). Enter/Esc keep working as
+     keyboard shortcuts. The ⌂ Home button (titlebar + mobile header)
+     brings the presentation back via goHome(). ===== */
   const hpStart = document.getElementById('hpStart');
-  const hpBrowse = document.getElementById('hpBrowse');
   const hpResume = document.getElementById('hpResume');
   if (hpStart) hpStart.addEventListener('click', () => enterApp());
-  if (hpBrowse) hpBrowse.addEventListener('click', () => enterApp('browse'));
   if (hpResume) hpResume.addEventListener('click', () => enterApp());
-  /* ===== CHANGED v20 · same-session reload: the bootstrap script in
+  const btnHome = document.getElementById('btnHome');
+  if (btnHome) btnHome.addEventListener('click', () => goHome());
+  /* ===== CHANGED v21 · same-session reload: the bootstrap script in
      <head> already hid #homePage before the first paint (data-skip-home);
-     here the state catches up — the node is dropped, HOME is marked as
-     entered and no stray Enter can re-trigger anything. ===== */
+     here the state catches up — the node is just HIDDEN now (the ⌂ Home
+     button can still revive it), HOME is marked as entered and no stray
+     Enter can re-trigger anything. ===== */
   if (document.documentElement.hasAttribute('data-skip-home')) {
     HOME.entered = true;
+    document.body.classList.add('in-app');
     const hp0 = document.getElementById('homePage');
-    if (hp0) hp0.remove();
+    if (hp0) hp0.hidden = true;
+  } else {
+    /* first visit (or back from ⌂ Home): the presentation is on screen —
+     start its motion layer */
+    armHomeFx(document.getElementById('homePage'));
   }
   if (hpResume) {
     const e = EX[S.current];

@@ -486,7 +486,9 @@ export function createDock(opts){
     removePanelFromTree(pid);
     layout=simplify(layout);
     renderLayout(); saveLayoutSoon();
-    if(!silent) toast('Panel "'+panels[pid].title+'" closed: reopen it from the activity bar.','');
+    /* ===== CHANGED v21 · no toast on close: opening/closing a tab is a
+       quiet, self-evident action (the tab is right there) — the popup
+       on every × was noise, not information. ===== */
   }
 
   /* ===== NEW v16 · toggle from the activity bar =====
@@ -526,6 +528,17 @@ export function createDock(opts){
       b.addEventListener('click', ()=>{ if(special){ onSpecial(pid); return; } togglePanel(pid); });   // ===== CHANGED v16 · toggle close + special panels =====
       bar.appendChild(b);
     });
+    /* ===== NEW v21 · THE BAR RETRACTS WHEN THE MOUSE LEAVES IT. The CSS
+       opens the bar on :hover OR :focus-within — but a mouse CLICK also
+       focuses the button, so :focus-within kept the bar expanded forever
+       after every click ("the menu never retracts"). On any pointer
+       release inside the bar the (pointer-given) focus is released:
+       keyboard focus is untouched (:focus-visible users keep the bar
+       open — pointerup never fires for them). ===== */
+    bar.addEventListener('pointerup', () => setTimeout(() => {
+      const ae = document.activeElement;
+      if (ae && bar.contains(ae) && !ae.matches(':focus-visible')) ae.blur();
+    }, 0));
     const sp=document.createElement('div'); sp.className='act-spacer'; bar.appendChild(sp);
     updateActivityBar();
   }
@@ -542,7 +555,9 @@ export function createDock(opts){
       if(!bar || bar.type!=='group') bar = layout = { type:'group', tabs:[], active:null };
       bar.tabs.push(pid); bar.active=pid;
       renderLayout(); saveLayoutSoon();
-      toast('Panel "'+panels[pid].title+'" added to the tab bar.');
+      /* ===== CHANGED v21 · no "added to the tab bar" toast: the user
+         asked for the panel, the panel appears — a popup on every open
+         was noise ("don't show a popup for every action performed"). ===== */
     }
     /* v15 · the panel the user asked for is rendered right away: the
        progressive scheduler would otherwise give it its LCP-priority turn */

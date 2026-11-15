@@ -4508,18 +4508,23 @@ textarea:hover,
 }
 
 /* ============================================================
-   ===== NEW v20 · HOMEPAGE (presentation of the site) =====
+   ===== CHANGED v21 · HOMEPAGE, second round (kinetic) =====
    ------------------------------------------------------------
-   Full-viewport section that covers the app shell until the visitor
-   enters (enterApp() in app.js). It is plain static markup: it paints
-   in the first frame (it IS the landing LCP) and doubles as crawlable
-   content for the search engines. A session that already entered
-   never sees it again (html[data-skip-home], set in <head> before the
-   CSS parses — no flash). Staggered entrance, hover motion on every
-   card and button: the page is alive but calm. Light theme overrides
+   The presentation page is now a moving experience — it is ONLY
+   presentation. Everything animated is gated behind #homePage.hp-live
+   (added by armHomeFx() in app.js, re-added by goHome()): the static
+   markup paints first, crawlers and no-JS visitors get the full
+   content, and the motion starts only when the page is on screen.
+   Layers: gradient blobs (.hp-bg) + floating code tokens (.hp-toks)
+   behind a centered .hp-inner. The hero word "apart" is split into
+   letter tiles that stay slightly scattered and float forever;
+   hovering the word spreads it further apart. Light-theme overrides
    live at the end of styles-light.css.
    ============================================================ */
 #homePage {
+  /* pointer parallax, set by armHomeFx() (-0.5 … 0.5 on both axes) */
+  --px: 0;
+  --py: 0;
   position: fixed;
   inset: 0;
   z-index: 1150;      /* above the app chrome; below toasts (1200) and the cookie bar (1500) */
@@ -4528,16 +4533,25 @@ textarea:hover,
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 34px 22px;
+  padding: 34px 22px 118px;   /* v21 · bottom clearance: the cookie notice
+                                 (fixed at the bottom on the first visit)
+                                 must never cover the copyright line */
   background:
-    radial-gradient(1100px 520px at 82% -12%, rgba(79, 156, 247, .16), transparent 62%),
-    radial-gradient(900px 440px at -12% 112%, rgba(126, 231, 135, .06), transparent 55%),
+    radial-gradient(1100px 520px at 82% -12%, rgba(79, 156, 247, .10), transparent 62%),
     #17181c;
   transition: opacity .42s ease, transform .42s ease;
 }
 
+/* ===== NEW v21 · CRITICAL: the section has display:flex, which would
+   override the UA's [hidden]{display:none} (an ID selector wins) —
+   without this rule, hp.hidden=true (the new "close" of enterApp)
+   would do nothing. ===== */
+#homePage[hidden] {
+  display: none
+}
+
 /* enterApp() adds .away: the page lets go with a soft zoom, then the
-   node is removed from the DOM (no display:none flip mid-transition) */
+   node is hidden (kept in the DOM for the ⌂ Home button) */
 #homePage.away {
   opacity: 0;
   transform: scale(1.015);
@@ -4550,50 +4564,125 @@ html[data-skip-home] #homePage {
   display: none
 }
 
+/* ---------- background layer 1 · drifting gradient blobs ---------- */
+.hp-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* parallax depth 1 (slower, opposite direction than the tokens) */
+  transform: translate3d(calc(var(--px) * -20px), calc(var(--py) * -14px), 0);
+}
+
+.hp-blob {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform
+}
+
+.hp-blob.b1 {
+  width: 46vw;
+  height: 46vw;
+  min-width: 420px;
+  min-height: 420px;
+  left: -12%;
+  top: -18%;
+  background: radial-gradient(circle at 40% 40%, rgba(79, 156, 247, .20), transparent 68%)
+}
+
+.hp-blob.b2 {
+  width: 38vw;
+  height: 38vw;
+  min-width: 360px;
+  min-height: 360px;
+  right: -10%;
+  top: 8%;
+  background: radial-gradient(circle at 55% 45%, rgba(126, 231, 135, .11), transparent 66%)
+}
+
+.hp-blob.b3 {
+  width: 34vw;
+  height: 34vw;
+  min-width: 320px;
+  min-height: 320px;
+  left: 26%;
+  bottom: -22%;
+  background: radial-gradient(circle at 50% 50%, rgba(188, 140, 255, .12), transparent 68%)
+}
+
+#homePage.hp-live .hp-blob.b1 { animation: blobDrift1 26s ease-in-out infinite alternate }
+#homePage.hp-live .hp-blob.b2 { animation: blobDrift2 31s ease-in-out infinite alternate }
+#homePage.hp-live .hp-blob.b3 { animation: blobDrift3 23s ease-in-out infinite alternate }
+
+@keyframes blobDrift1 {
+  from { transform: translate(0, 0) scale(1) }
+  to { transform: translate(7vw, 5vh) scale(1.14) }
+}
+
+@keyframes blobDrift2 {
+  from { transform: translate(0, 0) scale(1.08) }
+  to { transform: translate(-6vw, 7vh) scale(.94) }
+}
+
+@keyframes blobDrift3 {
+  from { transform: translate(0, 0) rotate(0deg) }
+  to { transform: translate(5vw, -6vh) rotate(28deg) }
+}
+
+/* ---------- background layer 2 · floating code tokens ---------- */
+.hp-toks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* parallax depth 2 (faster, opposite direction: feels closer) */
+  transform: translate3d(calc(var(--px) * 38px), calc(var(--py) * 24px), 0);
+}
+
+.hp-tok {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  font: 600 .74rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: .04em;
+  color: rgba(125, 211, 252, .16);
+  white-space: nowrap
+}
+
+.hp-tok:nth-child(even) { color: rgba(126, 231, 135, .13) }
+.hp-tok:nth-child(3n) { color: rgba(188, 140, 255, .14) }
+
+#homePage.hp-live .hp-tok { animation: tokFloat 8.5s ease-in-out infinite var(--dl, 0s) }
+
+@keyframes tokFloat {
+  0%, 100% { transform: translateY(0) rotate(-2deg) }
+  50% { transform: translateY(-17px) rotate(3deg) }
+}
+
+/* ---------- the content column ---------- */
 .hp-inner {
+  position: relative;
+  z-index: 1;
   width: min(880px, 100%);
   text-align: center
 }
 
-/* staggered entrance: hero first, cards last — one calm cascade */
-.hp-inner>* {
+/* staggered entrance: hero first, cards last — one calm cascade.
+   v21 · gated by .hp-live so the static markup paints first and the
+   cascade can be replayed by goHome(). */
+#homePage.hp-live .hp-inner>* {
   animation: hpIn .55s cubic-bezier(.22, .86, .3, 1) backwards
 }
 
-.hp-inner>*:nth-child(2) {
-  animation-delay: .07s
-}
-
-.hp-inner>*:nth-child(3) {
-  animation-delay: .12s
-}
-
-.hp-inner>*:nth-child(4) {
-  animation-delay: .18s
-}
-
-.hp-inner>*:nth-child(5) {
-  animation-delay: .22s
-}
-
-.hp-inner>*:nth-child(6) {
-  animation-delay: .28s
-}
-
-.hp-inner>*:nth-child(7) {
-  animation-delay: .34s
-}
+#homePage.hp-live .hp-inner>*:nth-child(2) { animation-delay: .07s }
+#homePage.hp-live .hp-inner>*:nth-child(3) { animation-delay: .12s }
+#homePage.hp-live .hp-inner>*:nth-child(4) { animation-delay: .18s }
+#homePage.hp-live .hp-inner>*:nth-child(5) { animation-delay: .24s }
+#homePage.hp-live .hp-inner>*:nth-child(6) { animation-delay: .30s }
+#homePage.hp-live .hp-inner>*:nth-child(7) { animation-delay: .34s }
 
 @keyframes hpIn {
   from {
     opacity: 0;
     transform: translateY(16px)
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hp-inner>* {
-    animation: none
   }
 }
 
@@ -4604,34 +4693,100 @@ html[data-skip-home] #homePage {
   font-size: .78125rem;
   font-weight: 700;
   letter-spacing: .05em;
-  color: var(--dim)
+  color: var(--dim);
+  cursor: default
 }
 
 .hp-brand svg {
   width: 20px;
-  height: 20px
+  height: 20px;
+  transition: rotate .45s cubic-bezier(.22, .86, .3, 1), scale .45s cubic-bezier(.22, .86, .3, 1)
 }
 
+.hp-brand:hover svg {
+  rotate: -10deg;
+  scale: 1.12
+}
+
+/* ---------- the hero, with "apart" literally taken apart ---------- */
 .hp-title {
   margin: 20px 0 14px;
   font-size: clamp(2.1rem, 6vw, 3.3rem);
-  line-height: 1.07;
+  line-height: 1.1;
   font-weight: 800;
   letter-spacing: -.02em;
   color: var(--text)
 }
 
-.hp-title em {
-  font-style: normal;
+.hp-l { display: block }
+
+#homePage.hp-live .hp-l {
+  animation: hpIn .6s cubic-bezier(.22, .86, .3, 1) backwards
+}
+
+#homePage.hp-live .hp-l:nth-child(1) { animation-delay: .1s }
+#homePage.hp-live .hp-l:nth-child(2) { animation-delay: .18s }
+
+/* the decomposed word: letter tiles, each on its own scatter + phase */
+.hp-apart {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap
+}
+
+.hp-letters {
+  display: inline-flex;
+  gap: .02em;
+  transition: gap .45s cubic-bezier(.22, .86, .3, 1)
+}
+
+/* hovering the word takes it further apart — the title becomes the
+   method: pull it apart, see the pieces */
+.hp-apart:hover .hp-letters { gap: .2em }
+
+.lt {
+  display: inline-block;
   background: linear-gradient(92deg, #4f9cf7, #7ee787);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  color: transparent
+  color: transparent;
+  transition: rotate .5s cubic-bezier(.22, .86, .3, 1), translate .5s cubic-bezier(.22, .86, .3, 1)
 }
 
+/* the resting scatter: 5 tiles, never perfectly aligned */
+.lt:nth-child(1) { --rr: -8deg; --ty: 6px; --dl: .04s; --fd: 5.6s }
+.lt:nth-child(2) { --rr: 5deg;  --ty: -4px; --dl: .12s; --fd: 6.3s }
+.lt:nth-child(3) { --rr: -4deg; --ty: 7px; --dl: .20s; --fd: 5.9s }
+.lt:nth-child(4) { --rr: 7deg;  --ty: -6px; --dl: .28s; --fd: 6.6s }
+.lt:nth-child(5) { --rr: -6deg; --ty: 5px; --dl: .36s; --fd: 6.1s }
+
+#homePage.hp-live .lt {
+  rotate: var(--rr);
+  translate: 0 var(--ty);
+  animation: ltIn .7s cubic-bezier(.22, .86, .3, 1) backwards calc(var(--dl) + .3s),
+             ltFloat var(--fd) ease-in-out infinite calc(var(--dl) + 1s)
+}
+
+.hp-apart:hover .lt {
+  rotate: calc(var(--rr) * 2.4);
+  translate: 0 calc(var(--ty) * 2.3)
+}
+
+@keyframes ltIn {
+  from { opacity: 0; translate: 0 calc(var(--ty) + 64px) }
+  to { opacity: 1; translate: 0 var(--ty) }
+}
+
+@keyframes ltFloat {
+  0%, 100% { transform: translateY(0) }
+  50% { transform: translateY(-6px) }
+}
+
+.hp-dot { color: var(--dim) }
+
 .hp-sub {
-  max-width: 640px;
+  max-width: 620px;
   margin: 0 auto 28px;
   color: var(--dim);
   font-size: .9375rem;
@@ -4642,12 +4797,13 @@ html[data-skip-home] #homePage {
   color: var(--text)
 }
 
+/* ---------- CTA: one way in (+ the contextual resume) ---------- */
 .hp-cta {
   display: flex;
   gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
-  margin-bottom: 14px
+  margin-bottom: 44px
 }
 
 .hp-btn {
@@ -4675,26 +4831,43 @@ html[data-skip-home] #homePage {
 }
 
 .hp-btn.primary {
+  position: relative;
+  overflow: hidden;
   background: linear-gradient(135deg, #4f9cf7, #3d7fd9);
   border-color: transparent;
   color: #0d1117
 }
 
-.hp-btn.primary:hover {
-  box-shadow: 0 12px 30px rgba(79, 156, 247, .35)
+/* a light sweep crosses the primary CTA on hover */
+.hp-btn.primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, .30) 50%, transparent 58%);
+  translate: -130% 0;
+  pointer-events: none
+}
+
+.hp-btn.primary:hover::after {
+  translate: 130% 0;
+  transition: translate .65s ease
+}
+
+/* a calm breathing glow while it waits to be clicked */
+#homePage.hp-live .hp-btn.primary {
+  animation: ctaPulse 3.4s ease-in-out infinite
+}
+
+@keyframes ctaPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 156, 247, 0) }
+  50% { box-shadow: 0 8px 30px rgba(79, 156, 247, .38) }
 }
 
 .hp-btn.resume {
   border-style: dashed
 }
 
-.hp-facts {
-  margin-bottom: 36px;
-  color: var(--faint);
-  font-size: .75rem;
-  letter-spacing: .03em
-}
-
+/* ---------- the four feature cards ---------- */
 .hp-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -4706,18 +4879,30 @@ html[data-skip-home] #homePage {
   background: rgba(255, 255, 255, .028);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 17px 16px 15px;
-  transition: transform .22s cubic-bezier(.4, 0, .2, 1), border-color .22s, background .22s
+  padding: 15px 15px 14px;
+  /* translate/scale carry the reveal, transform stays free for the
+     hover lift — they compose (independent properties) */
+  transition: translate .55s cubic-bezier(.22, .86, .3, 1), scale .55s cubic-bezier(.22, .86, .3, 1),
+    opacity .55s ease, transform .22s cubic-bezier(.4, 0, .2, 1), border-color .22s, background .22s, box-shadow .22s
+}
+
+/* before the IntersectionObserver reveals them (only when live:
+   no-JS visitors always see the cards) */
+#homePage.hp-live .hp-card:not(.in) {
+  opacity: 0;
+  translate: 0 28px;
+  scale: .97
 }
 
 .hp-card:hover {
   transform: translateY(-4px);
   border-color: var(--acc-line);
-  background: rgba(79, 156, 247, .07)
+  background: rgba(79, 156, 247, .07);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .35)
 }
 
 .hp-card h2 {
-  margin: 9px 0 6px;
+  margin: 10px 0 5px;
   font-size: .84375rem;
   color: var(--text)
 }
@@ -4725,18 +4910,291 @@ html[data-skip-home] #homePage {
 .hp-card p {
   margin: 0;
   font-size: .78125rem;
-  line-height: 1.65;
+  line-height: 1.6;
   color: var(--dim)
 }
 
-.hp-ic {
-  display: block;
-  font-size: 1.3rem;
-  line-height: 1
+/* ---------- card illustrations (animated, aria-hidden) ---------- */
+.hp-ill {
+  height: 92px;
+  border-radius: 10px;
+  background: rgba(9, 10, 13, .5);
+  border: 1px solid rgba(255, 255, 255, .05);
+  overflow: hidden
 }
 
+/* · 1 · the line that splits into micro-steps (THE method) */
+.ill-split {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 11px
+}
+
+.ghost {
+  width: 78%;
+  height: 9px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(79, 156, 247, .55), rgba(126, 231, 135, .4));
+  opacity: .45
+}
+
+.chips {
+  display: flex;
+  gap: 5px
+}
+
+.chip {
+  padding: 4px 8px;
+  border-radius: 7px;
+  font: 600 .68rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: #1f222b;
+  border: 1px solid #3a3e4a;
+  color: #cdd3de;
+  white-space: nowrap
+}
+
+.chip.c1 { color: #79c0ff; border-color: rgba(79, 156, 247, .45) }
+.chip.c2 { color: #7ee787; border-color: rgba(126, 231, 135, .4) }
+.chip.c3 { color: #d2a8ff; border-color: rgba(188, 140, 255, .4) }
+
+.stepline {
+  display: flex;
+  gap: 7px
+}
+
+.stepline i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3a3e4a
+}
+
+.stepline i.on { background: var(--acc) }
+
+/* the split loop: the whole line (ghost) fades as the chips pull
+   apart and the step dots light up, then it reassembles */
+#homePage.hp-live .ghost { animation: ghostFade 6.4s ease-in-out infinite }
+#homePage.hp-live .chips { animation: chipsSep 6.4s ease-in-out infinite }
+#homePage.hp-live .stepline i { animation: stepLight 6.4s ease-in-out infinite }
+#homePage.hp-live .stepline i:nth-child(2) { animation-delay: .3s }
+#homePage.hp-live .stepline i:nth-child(3) { animation-delay: .6s }
+#homePage.hp-live .chip { animation: chipBob 3.6s ease-in-out infinite }
+#homePage.hp-live .chip.c2 { animation-delay: .45s }
+#homePage.hp-live .chip.c3 { animation-delay: .9s }
+
+/* hovering the card makes the decomposition more eager */
+.hp-card:hover .ghost,
+.hp-card:hover .chips,
+.hp-card:hover .stepline i { animation-duration: 2.8s }
+
+@keyframes ghostFade {
+  0%, 12% { opacity: .5; scale: 1 1 }
+  55%, 82% { opacity: .07; scale: .62 .62 }
+  100% { opacity: .5; scale: 1 1 }
+}
+
+@keyframes chipsSep {
+  0%, 12% { gap: 4px }
+  55%, 82% { gap: 13px }
+  100% { gap: 4px }
+}
+
+@keyframes chipBob {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg) }
+  50% { transform: translateY(-4px) rotate(1.5deg) }
+}
+
+@keyframes stepLight {
+  0%, 18% { background: #3a3e4a; box-shadow: none }
+  45%, 78% { background: var(--acc); box-shadow: 0 0 9px rgba(79, 156, 247, .65) }
+  100% { background: #3a3e4a; box-shadow: none }
+}
+
+/* · 2 · the live terminal (black in every theme, like the app) */
+.ill-term {
+  display: flex;
+  flex-direction: column
+}
+
+.t-bar {
+  display: flex;
+  gap: 5px;
+  padding: 7px 10px;
+  background: #15171e;
+  border-bottom: 1px solid #23262e
+}
+
+.t-bar i { width: 8px; height: 8px; border-radius: 50% }
+.t-bar i:nth-child(1) { background: #ff5f57 }
+.t-bar i:nth-child(2) { background: #febc2e }
+.t-bar i:nth-child(3) { background: #28c840 }
+
+.t-body {
+  flex: 1;
+  padding: 9px 12px;
+  text-align: left;
+  font: .7rem/1.8 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace
+}
+
+.t-line { color: #a9b3c6; display: block }
+.t-out { color: #7ee787; display: block }
+.t-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  margin-top: 3px;
+  background: #7ee787;
+  vertical-align: middle
+}
+
+/* the terminal retypes its two lines forever */
+#homePage.hp-live .t-line { animation: termLine 6.5s ease infinite }
+#homePage.hp-live .t-out { animation: termOut 6.5s ease infinite }
+#homePage.hp-live .t-cursor { animation: cursorBlink 1.1s steps(1) infinite }
+
+@keyframes termLine {
+  0% { opacity: 0 }
+  8%, 72% { opacity: 1 }
+  80%, 96% { opacity: 0 }
+  100% { opacity: 0 }
+}
+
+@keyframes termOut {
+  0%, 28% { opacity: 0 }
+  38%, 72% { opacity: 1 }
+  80%, 96% { opacity: 0 }
+  100% { opacity: 0 }
+}
+
+@keyframes cursorBlink {
+  0%, 55% { opacity: 1 }
+  56%, 100% { opacity: 0 }
+}
+
+/* · 3 · charts & games: growing bars + the hopping sprite */
+.ill-chart {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 12px
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 9px;
+  height: 62px
+}
+
+.bars i {
+  width: 15px;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(180deg, #4f9cf7, #3d7fd9);
+  transform-origin: bottom
+}
+
+.bars .b1 { height: 32% }
+.bars .b2 { height: 58% }
+.bars .b3 { height: 44% }
+.bars .b4 { height: 74% }
+
+.sprite {
+  position: absolute;
+  bottom: 12px;
+  left: 18%;
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  background: #7ee787;
+  box-shadow: 0 0 12px rgba(126, 231, 135, .5)
+}
+
+#homePage.hp-live .bars i { animation: barGrow 4.6s ease-in-out infinite }
+#homePage.hp-live .bars .b2 { animation-delay: .18s }
+#homePage.hp-live .bars .b3 { animation-delay: .36s }
+#homePage.hp-live .bars .b4 { animation-delay: .54s }
+#homePage.hp-live .sprite { animation: spriteHop 4.6s ease-in-out infinite }
+
+.hp-card:hover .bars i,
+.hp-card:hover .sprite { animation-duration: 2.2s }
+
+@keyframes barGrow {
+  0% { scale: 1 .22 }
+  45%, 78% { scale: 1 1 }
+  100% { scale: 1 .22 }
+}
+
+@keyframes spriteHop {
+  0% { left: 16%; translate: 0 0 }
+  25% { left: 37%; translate: 0 -26px }
+  50% { left: 58%; translate: 0 0 }
+  75% { left: 79%; translate: 0 -21px }
+  90% { left: 84%; translate: 0 0 }
+  100% { left: 16%; translate: 0 0 }
+}
+
+/* · 4 · the progress ring that fills and checks */
+.ill-ring {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center
+}
+
+.ill-ring svg {
+  width: 72px;
+  height: 72px;
+  rotate: -90deg
+}
+
+.rbg {
+  fill: none;
+  stroke: #2b2e37;
+  stroke-width: 6
+}
+
+.rfg {
+  fill: none;
+  stroke: #4f9cf7;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 163.4;
+  /* static base (no-JS / reduced motion): filled at ~70% */
+  stroke-dashoffset: 49
+}
+
+.rcheck {
+  position: absolute;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #7ee787
+}
+
+#homePage.hp-live .rfg { animation: ringFill 5.6s cubic-bezier(.4, 0, .2, 1) infinite }
+#homePage.hp-live .rcheck { animation: checkPop 5.6s ease infinite }
+
+.hp-card:hover .rfg,
+.hp-card:hover .rcheck { animation-duration: 2.6s }
+
+@keyframes ringFill {
+  0% { stroke-dashoffset: 163.4 }
+  35%, 80% { stroke-dashoffset: 49 }
+  100% { stroke-dashoffset: 163.4 }
+}
+
+@keyframes checkPop {
+  0%, 30% { opacity: 0; scale: .4 }
+  42%, 80% { opacity: 1; scale: 1 }
+  100% { opacity: 0; scale: .4 }
+}
+
+/* ---------- footer: a plain copyright, like any site ---------- */
 .hp-foot {
-  margin-top: 32px;
+  margin-top: 34px;
   color: var(--faint);
   font-size: .75rem;
   letter-spacing: .06em
@@ -4752,6 +5210,28 @@ html[data-skip-home] #homePage {
   font-size: .8125rem
 }
 
+/* ===== NEW v21 · ⌂ HOME button (titlebar, next to the brand): an
+   icon-only .tl-btn — it sits beside the logo, it must not shout. ===== */
+.tl-home {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 7px
+}
+
+.tl-home svg {
+  width: 15px;
+  height: 15px;
+  display: block
+}
+
+.tl-home:hover svg {
+  rotate: -6deg;
+  scale: 1.1;
+  transition: rotate .3s, scale .3s
+}
+
+/* ---------- responsive ---------- */
 @media (max-width: 900px) {
   .hp-grid {
     grid-template-columns: repeat(2, 1fr)
@@ -4774,5 +5254,54 @@ html[data-skip-home] #homePage {
 
   .hp-btn {
     width: 100%
+  }
+
+  /* fewer decorations on small screens */
+  .hp-tok:nth-child(n+4) {
+    display: none
+  }
+
+  .hp-blob.b3 {
+    display: none
+  }
+}
+
+/* ---------- reduced motion: the page calms down completely ---------- */
+@media (prefers-reduced-motion: reduce) {
+  #homePage.hp-live .hp-inner>*,
+  #homePage.hp-live .hp-l,
+  #homePage.hp-live .lt,
+  #homePage.hp-live .hp-blob,
+  #homePage.hp-live .hp-tok,
+  #homePage.hp-live .ghost,
+  #homePage.hp-live .chips,
+  #homePage.hp-live .chip,
+  #homePage.hp-live .stepline i,
+  #homePage.hp-live .t-line,
+  #homePage.hp-live .t-out,
+  #homePage.hp-live .t-cursor,
+  #homePage.hp-live .bars i,
+  #homePage.hp-live .sprite,
+  #homePage.hp-live .rfg,
+  #homePage.hp-live .rcheck,
+  #homePage.hp-live .hp-btn.primary {
+    animation: none
+  }
+
+  /* no entrance = everything visible, statically scattered */
+  #homePage.hp-live .hp-card {
+    opacity: 1;
+    translate: none;
+    scale: none
+  }
+
+  #homePage.hp-live .lt {
+    rotate: var(--rr);
+    translate: 0 var(--ty)
+  }
+
+  .hp-bg,
+  .hp-toks {
+    transform: none
   }
 }
