@@ -1,0 +1,6 @@
+# Tutor - Progressive Breakdown (Python Crash Course exercises)
+# Static app on GitHub Pages: everything may be indexed.
+User-agent: *
+Allow: /
+
+Sitemap: https://tonecraft17.github.io/tutor-scomposizione/sitemap.xml

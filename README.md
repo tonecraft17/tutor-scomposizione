@@ -19,6 +19,7 @@ study an exercise → break it down into steps → write the lines → really ru
 - **Two themes, one click** (v17): dark (default) and a playful light one — both keep the **terminals and every code-writing area black**. Switch and manage credentials/privacy from the **⚙ Settings** overlay (last icon of the sidebar).
 - **Account in the top-right corner** (v17): avatar + exercises-completed counter; a click opens the summary popover (progress, autonomy, sync) with the “edit” bridge to Settings.
 - **No build step, no npm dependencies**: native ES modules + CSS. Serve it with any static server.
+- **Cookie notice + SEO** (v19): a one-time honest banner (no cookies, no tracking — progress lives in localStorage), canonical URL, Open Graph/Twitter cards with a custom `assets/og-image.png`, JSON-LD `WebApplication` data, `robots.txt` and `sitemap.xml` for Google indexing.
 
 ---
 
@@ -53,6 +54,8 @@ study an exercise → break it down into steps → write the lines → really ru
 | **Exercise panel** | the exercise's steps, one at a time, with verification — the writing zone grows with your code (v18) | following the book step by step |
 | **✎ Lines** | only your exercise's lines (those of "Exercise completed"), without the surrounding code — plus the **⚙ bridge** linking them to the project's modules | changing the values that matter (speeds, lives, scores…) |
 | **⌨ Code** | the complete program: file by file, from the `import`s to the end, with the project's support modules. **Editors only** (v18): no terminal below — the output of ▶ Run lands in the **Console** tab | seeing the whole picture, rewriting everything |
+
+> **v19**: the free-code **Sandbox** tab was removed — the ⌨ Code editor already covers free programming on the same runtime. Dock tabs now move **side by side only** (never above/below), and the reset buttons live in **Settings → Reset**.
 
 ---
 
@@ -144,7 +147,9 @@ tutor-scomposizione/
 ├── test_input_pygame.html      # manual page: Pygame game input
 ├── test_runtime_plotly.html    # manual page: Plotly runtime
 │
-├── CHANGELOG-v5.md … CHANGELOG-v17.md    # the full version history
+├── CHANGELOG-v5.md … CHANGELOG-v19.md    # the full version history
+├── robots.txt / sitemap.xml    # v19 · SEO: crawl rules + sitemap for Google
+├── assets/og-image.png         # v19 · 1200×630 Open Graph / Twitter card
 ├── README.md                   # this file
 ├── LICENSE                     # MIT
 └── .gitignore

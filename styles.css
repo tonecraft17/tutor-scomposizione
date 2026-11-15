@@ -421,9 +421,14 @@ body.mobile.head-off .m-head {
   align-items: stretch;   /* v17 · the buttons fill the (growing) width */
   padding: 8px 4px;
   gap: 4px;
-  transition: width .34s cubic-bezier(.25, 1.45, .4, 1),
-              margin-right .34s cubic-bezier(.25, 1.45, .4, 1),
-              box-shadow .28s ease;
+  /* ===== CHANGED v19 · smoother expansion: the old overshoot curve
+     (.25, 1.45, .4, 1) made the bar wobble against the drawer; the new
+     one is a fluid ease-out with a hint of spring, and the hover rule
+     below adds a short intent delay so brushing the bar no longer pops
+     it open. ===== */
+  transition: width .3s cubic-bezier(.22, .86, .3, 1),
+              margin-right .3s cubic-bezier(.22, .86, .3, 1),
+              box-shadow .26s ease;
 }
 
 .activitybar:hover,
@@ -431,6 +436,20 @@ body.mobile.head-off .m-head {
   width: 232px;
   margin-right: -186px;   /* 232 − 46: the dock root does not move */
   box-shadow: 18px 0 46px rgba(0, 0, 0, .45);
+  transition-delay: .05s;   /* v19 · hover intent: the bar opens when you MEAN it */
+}
+
+/* ===== NEW v19 · NO OVERLAP WITH THE MODULES DRAWER: while the drawer
+   is open (body.drawer-open, set by toggleDrawer() in app.js) the bar
+   stays collapsed — the expanded labels used to slide UNDER the drawer
+   mid-animation, the two menus fighting for the same pixels. Close the
+   drawer and the hover expansion comes back. ===== */
+body.drawer-open .activitybar:hover,
+body.drawer-open .activitybar:focus-within {
+  width: 46px;
+  margin-right: 0;
+  box-shadow: none;
+  transition-delay: 0s;
 }
 
 .act-btn {
@@ -452,7 +471,7 @@ body.mobile.head-off .m-head {
   position: relative;
   overflow: hidden;
   /* a11y: keep the focus ring instant (outline excluded from transition) */
-  transition: color .15s, background-color .15s, max-width .34s cubic-bezier(.25, 1.45, .4, 1);
+  transition: color .15s, background-color .15s, max-width .3s cubic-bezier(.22, .86, .3, 1);
 }
 
 .activitybar:hover .act-btn,
@@ -476,13 +495,14 @@ body.mobile.head-off .m-head {
   opacity: 0;
   transform: translateX(-8px);
   pointer-events: none;
-  transition: opacity .16s ease, transform .3s cubic-bezier(.25, 1.45, .4, 1);
+  transition: opacity .18s ease, transform .28s cubic-bezier(.22, .86, .3, 1);
 }
 
 .activitybar:hover .act-label,
 .activitybar:focus-within .act-label {
   opacity: 1;
-  transform: none
+  transform: none;
+  transition-delay: .07s;   /* v19 · staggered: the bar opens, THEN the names */
 }
 
 .act-btn:hover .act-label {
@@ -773,7 +793,9 @@ body.dragging-tab * {
   color: var(--acc)
 }
 
-/* zone di rilascio (ancoraggio) */
+/* zone di rilascio (ancoraggio) — ===== CHANGED v19 · THREE zones in
+   one horizontal band (left / center / right): tabs dock SIDE BY SIDE
+   only, the vertical top/bottom zones are gone (see engine/dock.js). ===== */
 .dk-drop {
   position: absolute;
   inset: 0;
@@ -782,9 +804,9 @@ body.dragging-tab * {
   gap: 5px;
   padding: 5px;
   pointer-events: none;
-  grid-template-areas: "t t t" "l c r" "b b b";
-  grid-template-rows: 1fr 1.4fr 1fr;
-  grid-template-columns: 1fr 1.4fr 1fr;
+  grid-template-areas: "l c r";
+  grid-template-rows: 1fr;
+  grid-template-columns: 1fr 1.35fr 1fr;
 }
 
 .dk-drop .z {
@@ -799,10 +821,6 @@ body.dragging-tab * {
   color: transparent
 }
 
-.dk-drop .z.t {
-  grid-area: t
-}
-
 .dk-drop .z.l {
   grid-area: l
 }
@@ -813,10 +831,6 @@ body.dragging-tab * {
 
 .dk-drop .z.r {
   grid-area: r
-}
-
-.dk-drop .z.b {
-  grid-area: b
 }
 
 .dk-drop .z.on {
@@ -3238,31 +3252,10 @@ figure.graph-card {
   color: var(--warn)
 }
 
-/* ===== CHANGED v18 · the Code and Lines panels are EDITOR-ONLY: the
-   terminal that sat under the textarea is gone (ONE console — the Console
-   tab). In its place this compact note: where the output of ▶ Run lands,
-   kept up to date by updateCodiceOut(), plus the "open Console" button. ===== */
-.ed-out-note {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  border: 1px dashed var(--border);
-  border-radius: 9px;
-  padding: 7px 11px;
-  font-size: 0.71875rem;
-  color: var(--dim);
-  background: var(--bg2)
-}
-
-.ed-out-note [data-outnote] {
-  line-height: 1.55
-}
-
-.ed-out-note .btn-cl {
-  margin-left: auto;
-  flex: none
-}
+/* ===== REMOVED v19 · .ed-out-note and its children: the "last run: ✓ ok ·
+   output in the Console tab…" note (and the "⌨ open Console" button) are
+   gone — the editors are pure writing space and the Console tab owns the
+   run status. ===== */
 /* ============================================================
    ===== NUOVO v12 · pannello RIGHE (editor leggero) =====
    Solo le righe dell'esercizio, un blocco per file/regione,
@@ -4264,5 +4257,249 @@ figure.graph-card {
   .m-nav > button span,
   .m-more-btn span {
     display: none
+  }
+}
+
+/* ============================================================
+   ===== NEW v19 · MOTION PASS — the app feels alive =====
+   ------------------------------------------------------------
+   More animations and hover-revealed states across the whole UI:
+   buttons lift and press, cards rise, the module tree leans into
+   the pointer, the media toolbars dim at rest and light up on
+   hover, and every freshly rendered panel settles in with a soft
+   fade-rise. Transform/opacity only (GPU-cheap); the global
+   prefers-reduced-motion switch at the top of this file disables
+   every one of them.
+   ============================================================ */
+
+/* — generic buttons: lift on hover, press on click — */
+.btn,
+.tl-btn,
+.btn-cl,
+.drawer-x,
+.ovl-x {
+  transition: color .15s, border-color .15s, background-color .15s,
+    transform .16s cubic-bezier(.3, .8, .4, 1), box-shadow .16s ease;
+}
+
+.btn:hover,
+.tl-btn:hover,
+.btn-cl:hover,
+.drawer-x:hover,
+.ovl-x:hover {
+  transform: translateY(-1px)
+}
+
+.btn:active,
+.tl-btn:active,
+.btn-cl:active {
+  transform: translateY(0) scale(.97)
+}
+
+/* — dock tabs: hover nudge, close button spring — */
+.dk-tab {
+  transition: color .15s, background-color .18s,
+    transform .16s cubic-bezier(.3, .8, .4, 1)
+}
+
+.dk-tab:hover {
+  transform: translateY(-1px)
+}
+
+.dk-tab .t-close {
+  transition: transform .14s cubic-bezier(.3, .8, .4, 1), color .14s
+}
+
+.dk-tab:hover .t-close {
+  transform: scale(1.18)
+}
+
+/* — activity bar icons acknowledge the pointer — */
+.act-btn svg {
+  transition: transform .18s cubic-bezier(.3, .8, .4, 1)
+}
+
+.act-btn:hover svg {
+  transform: scale(1.14)
+}
+
+/* — cards and surfaces rise on hover — */
+.stat-card,
+.auth-card,
+.hint-card,
+.graph-card,
+.stg-sec,
+.user-chip {
+  transition: transform .18s cubic-bezier(.3, .8, .4, 1),
+    border-color .18s, box-shadow .18s ease
+}
+
+.stat-card:hover,
+.auth-card:hover,
+.hint-card:hover,
+.graph-card:hover,
+.stg-sec:hover,
+.user-chip:hover {
+  transform: translateY(-2px);
+  border-color: var(--acc-line);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .3)
+}
+
+/* — module tree: rows lean into the pointer, chevrons rotate open — */
+.tree-ex {
+  transition: background-color .14s, color .14s,
+    transform .16s cubic-bezier(.3, .8, .4, 1)
+}
+
+.tree-ex:hover {
+  transform: translateX(3px)
+}
+
+.tree-ch-head .chev {
+  transition: transform .2s cubic-bezier(.3, .8, .4, 1)
+}
+
+.tree-ch.open .chev {
+  transform: rotate(90deg)
+}
+
+/* — hover-REVEALED controls: dimmed at rest, full on hover of their
+     area (the "comparsa su hover" the site was missing) — */
+.graphs-toolbar,
+.game-meta {
+  opacity: .55;
+  transition: opacity .22s ease
+}
+
+.graphs-wrap:hover .graphs-toolbar,
+.game-wrap:hover .game-meta {
+  opacity: 1
+}
+
+.drawer-foot,
+.game-help,
+.codice-assets summary {
+  opacity: .62;
+  transition: opacity .22s ease
+}
+
+.drawer:hover .drawer-foot,
+.game-wrap:hover .game-help,
+.codice-assets:hover summary {
+  opacity: 1
+}
+
+/* — freshly rendered panels settle in (every tab switch / run) — */
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(5px) }
+  to   { opacity: 1; transform: none }
+}
+
+.dk-panel,
+.m-panel {
+  animation: panel-in .2s ease both
+}
+
+/* — inputs warm up on hover — */
+input,
+textarea,
+.searchbox {
+  transition: border-color .16s, box-shadow .16s
+}
+
+input:hover,
+textarea:hover,
+.searchbox:hover {
+  border-color: var(--acc-line)
+}
+
+/* — hint keywords spring — */
+.kw {
+  transition: color .14s, border-color .14s,
+    transform .14s cubic-bezier(.3, .8, .4, 1)
+}
+
+.kw:hover {
+  transform: translateY(-1px)
+}
+
+/* — status chips react — */
+.sb-chip {
+  transition: background-color .14s, color .14s,
+    transform .14s cubic-bezier(.3, .8, .4, 1)
+}
+
+.sb-chip:hover {
+  transform: translateY(-1px)
+}
+
+/* — the account chip in the titlebar breathes on hover — */
+.tl-acct {
+  transition: transform .16s cubic-bezier(.3, .8, .4, 1),
+    border-color .15s, background-color .15s
+}
+
+.tl-acct:hover {
+  transform: translateY(-1px)
+}
+
+/* ============================================================
+   ===== NEW v19 · COOKIE NOTICE (bottom, shown once) =====
+   ------------------------------------------------------------
+   Minimal, honest banner for the online site: the app sets no
+   cookies at all (progress in localStorage). Slides up on the
+   first visit; app.js stores the dismissal.
+   ============================================================ */
+#cookieBar {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: 34px;            /* above the status bar */
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .5);
+  font-size: 0.78125rem;
+  color: var(--dim);
+  transform: translateY(140%);
+  opacity: 0;
+  transition: transform .38s cubic-bezier(.22, .86, .3, 1), opacity .3s ease;
+}
+
+/* the author rule above would beat the UA's [hidden]: keep the
+   attribute authoritative when app.js hides the banner */
+#cookieBar[hidden] {
+  display: none
+}
+
+#cookieBar.show {
+  transform: none;
+  opacity: 1
+}
+
+#cookieBar .cb-txt b {
+  color: var(--text)
+}
+
+#cookieBar .cb-acts {
+  display: flex;
+  gap: 8px;
+  flex: none
+}
+
+@media (max-width: 640px) {
+  #cookieBar {
+    bottom: 12px;
+    left: 10px;
+    right: 10px
   }
 }

@@ -13,7 +13,7 @@
    THE RULE THE STUDENT ASKED FOR: in BOTH themes the terminals and
    every code-WRITING area stay BLACK — a terminal is dark in any
    theme, and the syntax colors are tuned for it. See section 6:
-   .codice-ta, .rg-ta, .sandbox-ta, .code-input, the consoles, the
+   .codice-ta, .rg-ta, .code-input, the consoles, the
    step code blocks and the input() prompt all keep the dark
    surfaces of styles.css (and color-scheme:dark, so their internal
    scrollbars/carets match).
@@ -258,7 +258,6 @@ html[data-theme="light"] .field input {
    text and the dark-tuned Python syntax colors. color-scheme:dark
    keeps their inner scrollbars and carets dark too. */
 html[data-theme="light"] .codice-ta,
-html[data-theme="light"] .sandbox-ta,
 html[data-theme="light"] .code-area,
 html[data-theme="light"] .code-input,
 html[data-theme="light"] .console-box,
@@ -266,16 +265,16 @@ html[data-theme="light"] .console-head,
 html[data-theme="light"] .step-done pre,
 html[data-theme="light"] .ex-final pre,
 html[data-theme="light"] .hint-card code.syn,
-html[data-theme="light"] .input-modal-field,
-html[data-theme="light"] #sbOut {
+html[data-theme="light"] .input-modal-field {
   background: #14151a;
   color: #e8eaf0;
   border-color: #2c2e38;
   color-scheme: dark;
 }
 
-html[data-theme="light"] .console-box,
-html[data-theme="light"] #sbOut {
+/* ===== REMOVED v19 · the #sbOut overrides: the Sandbox panel is gone
+   (the ⌨ Code editor covers free programming). ===== */
+html[data-theme="light"] .console-box {
   background: #101216;
 }
 

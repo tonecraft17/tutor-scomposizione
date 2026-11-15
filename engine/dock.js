@@ -2,7 +2,9 @@
    ENGINE/DOCK · movable VS Code-style panels
    ------------------------------------------------------------
    - split tree (row/column) with groups of tabs
-   - tab dragging with ghost and 5 docking zones
+   - tab dragging with ghost and 3 docking zones (left / center /
+     right — side by side ONLY, v19: a tab can never land above or
+     below another one)
    - resize gutters
    - layout persistence on localStorage
    - activity bar, mobile view with single tabs
@@ -56,9 +58,13 @@ export function createDock(opts){
      name is EXACTLY the title of the tab/overlay it opens — what you
      read on the expanded sidebar is what lands in the tab bar:
        Modules → drawer "Modules" · Exercise/Code/Lines/Console/Charts/
-       Game/Progress/Sandbox → the dock tab of the same name ·
+       Game/Progress → the dock tab of the same name ·
        Guide → the guide overlay · Settings → the settings overlay.
-     (The aria-label keeps a longer explanation for screen readers.) ===== */
+     (The aria-label keeps a longer explanation for screen readers.)
+     ===== REMOVED v19 · the Sandbox tab is GONE: the ⌨ Code editor is
+     already a free-program editor (same runtime, same charts/games),
+     so the Sandbox was a duplicate writing surface. The two exercise
+     hints that pointed at it now point at ⌨ Code. ===== */
   const ACT = [
     ['moduli',   'files', 'Modules'],     // v18 · opens the side drawer
     // ===== REMOVED v16.2 · the 'traccia' (Exercise walkthrough) panel is gone:
@@ -77,7 +83,7 @@ export function createDock(opts){
     ['gioco',    'flask', 'Game'],
     ['progressi','chart', 'Progress'],
     ['guida',    'help',  'Guide'],               // v16 · opens the overlay
-    ['sandbox',  'flask', 'Sandbox'],
+    /* ===== REMOVED v19 · 'sandbox' panel (see the note above) ===== */
     /* ===== REMOVED v17 · 'account' moved OUT of the activity bar: the
        account now lives in the TOP-RIGHT button of the titlebar (popover
        with info + synthetic progress, "Edit" → Settings). The Account
@@ -91,15 +97,19 @@ export function createDock(opts){
      a chart switched the tab and the student had no button to come back or
      to see the charts again; the walkthrough tab was dropped in v16.2:
      the statement is in the Exercise panel itself). Everything else
-     (editors, progress, sandbox, account) moves into the "⋯ More"
+     (editors, progress, account) moves into the "⋯ More"
      drop-up menu; Modules is the ☰ drawer and Guide the ? overlay, both
-     opened from the mobile header. ===== */
+     opened from the mobile header. (v19 · sandbox removed from More.) ===== */
   const MOBILE_MAIN = ['esercizio','console','grafici','gioco'];
-  const MOBILE_MORE = ['codice','righe','progressi','sandbox','account'];
+  const MOBILE_MORE = ['codice','righe','progressi','account'];
+  /* ===== CHANGED v19 · SIDE-BY-SIDE ONLY: every closed panel reopened
+     from the activity bar docks to the RIGHT of the work area (or joins
+     an existing tab bar). No panel is ever inserted above or below
+     another one anymore — 'bottom' is gone, matching the drag zones. ===== */
   const OPEN_ZONES = { esercizio:'right',
-                       codice:'bottom',                                                                    // ===== NEW v10 =====
-                       righe:'bottom',                                                                     // ===== NEW v12 · the light editor opens in its own split (separate tab) =====
-                       console:'bottom', grafici:'bottom', gioco:'bottom', progressi:'bottom', sandbox:'bottom', account:'right' };
+                       codice:'right',
+                       righe:'right',
+                       console:'right', grafici:'right', gioco:'right', progressi:'right', account:'right' };
 
   let GIDSEQ=0, layout=null, DRAG=null, mobileTab='esercizio';
 
@@ -174,8 +184,8 @@ export function createDock(opts){
      it renders first, together with the skeleton; the heavy Modules tree
      follows in the next frame instead of delaying everything. */
   const BODY_PRIO = { esercizio:0, moduli:1, console:2, codice:3,
-                      righe:4, progressi:5, grafici:6, gioco:7, sandbox:8,
-                      account:10, guida:11 };
+                      righe:4, progressi:5, grafici:6, gioco:7,
+                      account:10, guida:11 };   // v19 · sandbox gone
   let bodyQueue=[], bodyTick=0;
   function queueBodies(){
     if(bodyTick) cancelAnimationFrame(bodyTick);
@@ -331,18 +341,25 @@ export function createDock(opts){
     if(gEl && gEl.__node){
       if(DRAG.target!==gEl){ clearOverlay(); DRAG.target=gEl; DRAG.overlay=makeOverlay(gEl); gEl.classList.add('drag-over'); }
       const r=gEl.getBoundingClientRect();
-      const x=(ev.clientX-r.left)/r.width, y=(ev.clientY-r.top)/r.height;
-      const dx=Math.min(x,1-x), dy=Math.min(y,1-y);
+      /* ===== CHANGED v19 · SIDE-BY-SIDE ONLY: the zone is decided by the
+         HORIZONTAL position of the pointer alone — left / center / right.
+         The old vertical zones (top/bottom) are gone: a tab can only be
+         moved NEXT TO another one, never above or below it, so dragging
+         can no longer build the column splits the user did not want. ===== */
+      const x=(ev.clientX-r.left)/r.width;
       let zone;
-      if(dx<=0.30 && dx<=dy) zone = x<0.5?'left':'right';
-      else if(dy<=0.30) zone = y<0.5?'top':'bottom';
+      if(x<0.30) zone='left';
+      else if(x>0.70) zone='right';
       else zone='center';
       DRAG.zone=zone; setZone(DRAG.overlay, zone);
     } else if(DRAG.target){ DRAG.target.classList.remove('drag-over'); DRAG.target=null; DRAG.zone=null; clearOverlay(); }
   }
   function makeOverlay(gEl){
+    /* ===== CHANGED v19 · three zones only (left / center / right), all
+       in one horizontal band: the visual promise matches the new drag
+       rule — side by side, never stacked. ===== */
     const ov=document.createElement('div'); ov.className='dk-drop';
-    ov.innerHTML='<div class="z t" data-z="top"></div><div class="z l" data-z="left"></div><div class="z c" data-z="center">add to tab</div><div class="z r" data-z="right"></div><div class="z b" data-z="bottom"></div>';
+    ov.innerHTML='<div class="z l" data-z="left"></div><div class="z c" data-z="center">add to tab</div><div class="z r" data-z="right"></div>';
     gEl.appendChild(ov); return ov;
   }
   function setZone(ov, zone){ if(!ov) return; ov.querySelectorAll('.z').forEach(z=>z.classList.toggle('on', z.dataset.z===zone)); }
@@ -436,8 +453,10 @@ export function createDock(opts){
     const bar=$('#activitybar'); if(!bar) return;
     bar.innerHTML='';
     ACT.forEach(([pid,ic,title],i)=>{
-      // ===== CHANGED v10 · the separator follows the panel, not the index =====
-      if(pid==='sandbox'){ const sep=document.createElement('div'); sep.className='act-sep'; bar.appendChild(sep); }
+      // ===== CHANGED v10 · the separator follows the panel, not the index
+      //     (v19 · it now sits above Settings, the bottom icon, since the
+      //     Sandbox entry that used to carry it is gone) =====
+      if(pid==='impostazioni'){ const sep=document.createElement('div'); sep.className='act-sep'; bar.appendChild(sep); }
       const special = specialPanels[pid];   // ===== NEW v16 · drawer / overlay triggers =====
       const extra = special
         ? (pid === 'guida' ? ' (opens the guide overlay, not a dock tab)'

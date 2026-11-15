@@ -1,7 +1,7 @@
 /* ============================================================
    APP · entry point: joins the modules and starts the app
    ============================================================ */
-/* ===== NEW v16.1 · every ES-module import now carries the same ?v=18
+/* ===== NEW v16.1 · every ES-module import now carries the same ?v=19
    query as the <script>/<link> tags in index.html. WHY: the service worker
    caches same-origin GETs by their FULL URL (query included), and the
    module files used to have NO version in their URL. On the first visit
@@ -13,21 +13,21 @@
    stale worker cache-misses and fetches the fresh, consistent set. The
    specifiers must stay character-for-character identical to the
    modulepreload hrefs in index.html, or each file would be fetched twice. ===== */
-import { APP, KEYS, supabaseConfigured, PLOTLY_JS } from './config.js?v=18';
-import { CH, EX, ORDER, TOTAL_EX, ROADMAP, codiceEsercizio } from './data/exercises.js?v=18';
-import { createDock, isMobile, icon } from './engine/dock.js?v=18';
+import { APP, KEYS, supabaseConfigured, PLOTLY_JS } from './config.js?v=19';
+import { CH, EX, ORDER, TOTAL_EX, ROADMAP, codiceEsercizio } from './data/exercises.js?v=19';
+import { createDock, isMobile, icon } from './engine/dock.js?v=19';
 import {
   stateFor, righeUtente, righeUtenteRaw, righeUtenteConCommenti, conRientro, checkStep, assistLabel, assistSummary,
   autonomiaOf, globalStats, nextExercise, verificaOutput
-} from './engine/tutor.js?v=18';
+} from './engine/tutor.js?v=19';
 import {
   runPythonCode, getStatus, onPythonStatus,
   onMatplotlibImage, onPlotlyFigure, onPygameFrame,
   onPythonRunEnd, sendPygameEvent, stopPygameGame
-} from './engine/python-runner.js?v=18'; // ===== MODIFIED =====
-import * as storage from './engine/storage.js?v=18';
-import * as solDb from './engine/solutions-db.js?v=18'; // ===== NEW · local solutions database =====
-import { PONTE } from './engine/ponte.js?v=18'; // ===== NEW v12.1 · bridge from exercise lines → project =====
+} from './engine/python-runner.js?v=19'; // ===== MODIFIED =====
+import * as storage from './engine/storage.js?v=19';
+import * as solDb from './engine/solutions-db.js?v=19'; // ===== NEW · local solutions database =====
+import { PONTE } from './engine/ponte.js?v=19'; // ===== NEW v12.1 · bridge from exercise lines → project =====
 
 /* ---------- UI utilities ---------- */
 const $ = s => document.querySelector(s);
@@ -155,6 +155,12 @@ function toggleDrawer(open) {
   const want = open === undefined ? !DRAWER.open : !!open;
   if (want === DRAWER.open) return;
   DRAWER.open = want;
+  /* ===== NEW v19 · while the drawer is open the activity bar must NOT
+     expand on hover: the two menus used to fight for the same pixels
+     (labels sliding under the drawer, mid-animation). styles.css reads
+     body.drawer-open and keeps the bar collapsed until the drawer is
+     closed — the overlap is gone. ===== */
+  document.body.classList.toggle('drawer-open', want);
   const ab = document.querySelector('.act-btn[data-panel="moduli"]');
   if (want) {
     DRAWER.invoker = document.activeElement;
@@ -432,7 +438,7 @@ function renderImpostazioni(box) {
   const syncOn = storage.isSyncEnabled();
   const wrap = elHtml(`<div class="stg-wrap">
     <h2 class="pan-title">Settings</h2>
-    <p class="pan-sub" style="margin-bottom:10px">Appearance, access credentials and privacy — everything else lives where it always did.</p>
+    <p class="pan-sub" style="margin-bottom:10px">Appearance, access credentials, privacy and reset.</p>
 
     <!-- 1 · APPEARANCE -->
     <section class="stg-sec">
@@ -495,6 +501,7 @@ function renderImpostazioni(box) {
     <section class="stg-sec">
       <h3>🔒 Privacy and data</h3>
       <ul class="priv-list">
+        <li><b>Cookies</b> — <b>none</b>: this site sets no cookies and uses no analytics/tracking (see the notice at the bottom of the page).</li>
         <li><b>Progress and drafts</b> — <code>localStorage</code> of this browser (only you can read it; it never leaves the device unless you sign in).</li>
         <li><b>Solution files of the book</b> — <code>IndexedDB</code> of this browser (public book material, no personal data).</li>
         <li><b>Cloud mirror</b> — only if you <b>sign in</b>: your progress row on the school's Supabase, tied to the account email. Nothing else is ever sent.</li>
@@ -512,6 +519,16 @@ function renderImpostazioni(box) {
         <button class="btn" id="stgExport">⬇ export my data (JSON)</button>
         <button class="btn danger" id="stgWipeLocal">🗑 delete local data</button>
         ${utente ? `<button class="btn danger" id="stgWipeCloud">☁ delete cloud data</button>` : ''}
+      </div>
+    </section>
+
+    <!-- 4 · RESET (v19 · moved here from the titlebar) -->
+    <section class="stg-sec">
+      <h3>⟲ Reset</h3>
+      <p class="stg-note">The reset buttons live here now: the titlebar keeps only Guide and Account.</p>
+      <div class="step-actions" style="margin-top:8px">
+        <button class="btn" id="stgResetLayout" title="Reopen the default panel layout — your progress is NOT touched">⟲ reset the panel layout</button>
+        <button class="btn danger" id="stgResetAll">⟲ reset everything — progress included</button>
       </div>
     </section>
   </div>`);
@@ -587,6 +604,17 @@ function renderImpostazioni(box) {
     if (!ok) return;
     try { await storage.azzeraRemoto(); toast('Cloud data deleted.', 'ok'); }
     catch (er) { toast('⚠ Could not delete the cloud data.', 'warn'); }
+  });
+
+  /* --- 4 · reset (v19 · moved here from the titlebar and the Progress
+     panel: ONE place owns every "start over") --- */
+  wrap.querySelector('#stgResetLayout').addEventListener('click', () => {
+    dock.resetLayout();
+    toast('⟲ Panel layout restored to the default.', 'ok');
+  });
+  wrap.querySelector('#stgResetAll').addEventListener('click', async () => {
+    const ok = await modal('<h3>⟲ Reset everything?</h3><p>Progress, drafts and the panel layout go back to the initial state — the cloud copy, if any, is deleted too. This cannot be undone.</p>', 'Yes, reset');
+    if (ok) resetAll();
   });
 
   box.appendChild(wrap);
@@ -860,7 +888,9 @@ function renderGrafici(box) {
   setupFs(wrap, btnFs);
 
   if (!GRAPHS.items.length) {
-    wrap.appendChild(elHtml(`<div class="graphs-empty">No charts yet. Run a program with <code>plt.show()</code> (Matplotlib) or <code>fig.show()</code> (Plotly) to see it here.</div>`));
+    /* ===== CHANGED v19 · one short line: a first-time visitor does not
+       need the library lesson — the how-to lives in the Guide. ===== */
+    wrap.appendChild(elHtml(`<div class="graphs-empty">No charts yet — run <code>plt.show()</code> or <code>fig.show()</code>.</div>`));
   } else {
     const n = GRAPHS.items.length;
     bar.querySelector('.graphs-count').textContent = n + (n === 1 ? ' chart' : ' charts');
@@ -971,7 +1001,10 @@ function renderGioco(box) {
   box.classList.add('gioco-panel');
   const wrap = elHtml(`<div class="game-wrap"></div>`);
   if (!GAME.lastFrame) {
-    wrap.appendChild(elHtml(`<div class="game-empty">No frames yet. Run a program with <code>pygame.display.flip()</code>: the game appears here — and it's <b>playable</b> (keyboard and mouse pass through to the canvas).</div>`));
+    /* ===== CHANGED v19 · same treatment as the Charts panel: one line,
+     the playable/keyboard details already live in the help below the
+     canvas and in the Guide. ===== */
+    wrap.appendChild(elHtml(`<div class="game-empty">No game yet — run a program with <code>pygame.display.flip()</code>.</div>`));
   } else {
     wrap.appendChild(elHtml(`<div class="game-meta" id="gameMeta">
       <span class="dim"><b>${GAME.meta.w}×${GAME.meta.h}</b></span>
@@ -1531,7 +1564,6 @@ async function eseguiEsercizio(e) {
   }
   saveProgress();
   dock.refreshPanels(['console', 'esercizio', 'progressi']);
-  updateCodiceOut();          // v18 · refreshes the "output in the Console" note of the editors
   renderStatus();
 }
 
@@ -1595,7 +1627,6 @@ async function eseguiProgetto(e, st, mod) {
   }
   saveProgress();
   dock.refreshPanels(['console', 'esercizio', 'progressi']);
-  updateCodiceOut();
   renderStatus();
 }
 function notaSoluzioneNonEseguibile(st, sol) {
@@ -1603,7 +1634,7 @@ function notaSoluzioneNonEseguibile(st, sol) {
   toast('📦 This exercise modifies a ' + motivo + ': the files are archived in the database, but running it requires Python locally.', 'warn');
   st.runs.push({ t: nowT(), dur: 0, out: '📦 Not runnable in the browser (' + motivo + ').\nThe steps of this exercise are fragments of DIFFERENT files of a complete project (archived in the local database): they do not form a single Python program. To run it, replicate the files locally with Python installed.', err: null, sol: true });
   st.runs = st.runs.slice(-12);
-  saveProgress(); dock.refreshPanels(['console']); updateCodiceOut(); renderStatus();
+  saveProgress(); dock.refreshPanels(['console']); renderStatus();
 }
 
 /** ===== NEW · Runs the official solution from the local database =====
@@ -1651,7 +1682,7 @@ async function eseguiSoluzione(e, sol, st, automatica, nomeMancante) {
       : `🧰 Your code doesn't produce output yet (it only defines classes/functions): the full solution ${dove}.`)
     : `📚 Solution run: ${run.game ? 'game in the <b>Game</b> panel, output in the Console.' : (run.chart && !outputUtile(run.out).trim() ? 'chart in the <b>Charts</b> panel.' : 'output in the Console.')}`, 'ok');
   if (isMobile()) { dock.setMobileTab(run.game ? 'gioco' : (run.chart && !outputUtile(run.out).trim() ? 'grafici' : 'console')); dock.renderMobilePanel(); dock.renderMobileNav(); }
-  saveProgress(); dock.refreshPanels(['console', 'esercizio', 'progressi']); updateCodiceOut(); renderStatus();
+  saveProgress(); dock.refreshPanels(['console', 'esercizio', 'progressi']); renderStatus();
 }
 /* ---------- EXERCISE panel ---------- */
 function stepCard(e, idx) {
@@ -1912,9 +1943,9 @@ function renderEsercizio(box) {
      predetermined solution;
    · ===== CHANGED v18 · EDITOR ONLY: the terminal that used to
      live below the textarea is gone. The output of ▶ Run goes
-     to the Console tab (the app's single console); a compact
-     note with an "open Console" button sits where the terminal
-     was, updated after every run by updateCodiceOut(); =====
+     to the Console tab (the app's single console).
+     ===== CHANGED v19 · the compact "output in the Console" note
+     is gone too — pure editor, zero footer noise; =====
    · "⟲ restore original" discards the edits and goes back to
      the program assembled from the passed steps.
    The override is armed ONLY if the typed content differs from
@@ -2364,7 +2395,7 @@ function renderRighe(box) {
   const wrap = elHtml(`<div class="righe-wrap"></div>`);
   wrap.appendChild(elHtml(`<div>
     <h2 class="pan-title">${icon('rows')} Exercise lines · ${esc(e.id)} ${esc(e.t)}</h2>
-    <p class="pan-sub righe-sub" style="margin-bottom:8px">Here you edit <b>only the lines of this exercise</b>, without the full code around them. Each block tells you <b>which module contains it</b> (file and lines): "▶ run" sends the full program to the runtime <b>with your edits</b>.</p>
+    <p class="pan-sub righe-sub" style="margin-bottom:8px">Only the lines of this exercise — the full program is in <b>⌨ Code</b>. "▶ run" executes it <b>with your edits</b>.</p>
     <div class="codice-headrow">
       <span class="chip ok" id="righeBadge"></span>
       <button class="btn tiny" id="rgOpen" title="Open the ⌨ full Code editor: the whole program that 'run' sends to the runtime">⌨ full module</button>
@@ -2396,15 +2427,15 @@ function renderRighe(box) {
         const dove = intero ? `new file of the exercise · ${tot} lines` : rr.map(r => r.from === r.to ? 'line ' + r.from : 'lines ' + r.from + '–' + r.to).join(' · ') + ' of ' + tot;
         return `<button class="btn-cl rg-rif" data-open="${esc(fn)}" title="Open ${esc(fn)} in ⌨ Code (the full module containing the exercise)">📄 ${esc(fn)} <span class="rg-of">${dove}</span></button>`;
       }).join(' ') + (fileReg.length > 5 ? ` <span class="rg-of">+ ${fileReg.length - 5} more modules</span>` : '');
-      sub.innerHTML = `The steps of this exercise are <b>fragments of a larger project</b>: below are <b>only the lines of your exercise</b> — the ones of "Exercise completed", nothing else. The project implements them in: ${rif}. With the <b>⚙ bridge</b> (below the lines) your edits flow to the module: "▶ run" runs the program <b>with your lines</b>. The whole project (${slice.nPy} files · ▶ <code>${esc(slice.entry)}</code>) lives in ⌨ Code.` +
+      sub.innerHTML = `Only the <b>lines of your exercise</b> — the whole project (${slice.nPy} files · ▶ <code>${esc(slice.entry)}</code>) lives in ⌨ Code: ${rif}. Your edits flow to the module via the <b>⚙ bridge</b>.` +
         (slice.prev ? ` <span class="muted">Extends ${esc(slice.prev.id)} "${esc(slice.prev.t)}".</span>` : '');
       sub.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => apriModulo(b.dataset.open)));
     } else if (slice.modo === 'files') {
-      sub.innerHTML = `<b>Multi-file</b> exercise: below are <b>your files</b>, one per block, without the support modules around them. "▶ run" launches <b>▶ ${esc(slice.main)}</b> with the latest content of every block.`;
+      sub.innerHTML = `<b>Multi-file</b> exercise: your files, one per block — "▶ run" launches <b>▶ ${esc(slice.main)}</b>.`;
     } else {
       const nBase = slice.base ? slice.base.split('\n').filter(l => l.trim()).length : 0;
       const nRighe = slice.righe ? slice.righe.split('\n').filter(l => l.trim()).length : 0;
-      sub.innerHTML = `Below are <b>only the exercise lines</b> (the passed steps: ${nRighe} lines)${nBase ? `, without the <b>prerequisite base</b> (${nBase} lines, hidden: it is re-added on its own when you press ▶ run)` : ''}${slice.supporto.length ? ` and without the <b>support modules</b> (${slice.supporto.length}: ${esc(slice.supporto.join(', '))})` : ''}. The full program that "▶ run" sends to the runtime is in ⌨ Code.`;
+      sub.innerHTML = `Only the <b>exercise lines</b> (${nRighe} passed so far)${nBase ? ` · prerequisite base hidden (${nBase} lines, re-added by ▶ run)` : ''}${slice.supporto.length ? ` · support modules: ${esc(slice.supporto.join(', '))}` : ''} — the full program is in ⌨ Code.`;
     }
     rgOpen.addEventListener('click', () => apriModulo(slice.main));
     /* --- blocks (step by step in 'sol' · file per files · lines per step) --- */
@@ -2542,26 +2573,23 @@ function renderRighe(box) {
       if (divergente) blocco.classList.add('extra');
       blocchi.appendChild(blocco);
     }
-    /* --- actions + output note (v18: editor only, no embedded terminal) --- */
+    /* --- actions (v19: no output note, no status noise — the badge and
+       the Console tab say everything) --- */
     const acts = elHtml(`<div class="ex-actions" style="margin-top:0">
       <button class="btn primary" id="rgRun">▶ run</button>
       <button class="btn" id="rgReset" title="Discard the edits: go back to the exercise's original lines (they apply to the ⌨ Code editor too)">⟲ restore original</button>
-      <span class="rt-note" id="rgStatus">Ctrl+Enter to run · edits are saved with your progress</span>
-    </div>`);
-    const outNote = elHtml(`<div class="ed-out-note">
-      <span data-outnote>▶ Run prints in the <b>Console</b> tab</span>
-      <button class="btn-cl" data-openconsole title="Open the Console tab: output and run history live there">⌨ open Console</button>
+      <span class="rt-note" id="rgStatus" hidden></span>
     </div>`);
     wrap.appendChild(acts);
-    wrap.appendChild(outNote);
-    const openConsoleBtn = wrap.querySelector('[data-openconsole]');
-    if (openConsoleBtn) openConsoleBtn.addEventListener('click', () => apriConsole());
     /* --- input → arms/disarms the overrides (the same ones as ⌨ Code) --- */
+    /* ===== CHANGED v19 · the constant "Ctrl+Enter to run · edits are
+       saved…" noise is gone: the note stays hidden and speaks only when
+       there is something to SAY (bridge warnings, values that did not
+       flow through). ===== */
     const aggiornaStato = (avviso) => {
       document.querySelectorAll('#rgStatus').forEach(el => {
-        el.textContent = 'Ctrl+Enter to run · ' +
-          (codiceArmato(e, st) ? 'edits saved ✓' : 'no edits: runs the original program') +
-          (avviso ? ' · ' + avviso : '');
+        el.textContent = avviso || '';
+        el.hidden = !avviso;
       });
       aggiornaBadgeCodice(e);
     };
@@ -2640,7 +2668,7 @@ function renderRighe(box) {
       toast('⟲ Original lines restored.', 'ok');
       dock.refreshPanels(['righe', 'codice', 'esercizio']);
     });
-    requestAnimationFrame(() => { aggiornaBadgeCodice(e); updateCodiceOut(); });
+    requestAnimationFrame(() => { aggiornaBadgeCodice(e); });
   })();
 }
 /** Live-updates the "modified version" markers: the editor badge,
@@ -2729,39 +2757,12 @@ function runBlockEl(r, e) {
   }
   return b;
 }
-/** ===== CHANGED v18 · the Code and Lines panels are EDITOR-ONLY: the
- *  terminal below the textarea is gone (ONE console in the whole app —
- *  the Console tab). updateCodiceOut() now refreshes the compact note
- *  that replaced it (.ed-out-note > [data-outnote]): it always tells
- *  where the output of ▶ Run lands and how many runs are in the history,
- *  so a student who pressed Run from an editor tab is never left
- *  wondering where the result went.
- *  FIX v10 kept · updates ALL instances (desktop dock + mobile view). ===== */
-function updateCodiceOut() {
-  const els = document.querySelectorAll('[data-outnote]');
-  if (!els.length) return;
-  const e = EX[S.current] || EX[ORDER[0]];
-  const st = exState(e.id);
-  const n = st.runs.length;
-  const html = !n
-    ? '▶ Run prints in the <b>Console</b> tab'
-    : (() => {
-      const last = st.runs[n - 1];
-      const esito = last.err ? 'last run: ⚠ error'
-        : last.game ? 'last run: 🎮 game'
-          : last.chart ? 'last run: 📊 chart'
-            : 'last run: ✓ ok';
-      return `${esito} · output in the <b>Console</b> tab · ${n} run${n === 1 ? '' : 's'} in the history`;
-    })();
-  els.forEach(el => { el.innerHTML = html; });
-}
-/** ===== NEW v18 · opens the Console tab from the editors' output note
- *  (same pattern as apriCodice/apriRighe: mobile switches its view,
- *  desktop activates the tab — or inserts it if the user closed it). ===== */
-function apriConsole() {
-  if (isMobile()) { dock.setMobileTab('console'); dock.renderMobilePanel(); dock.renderMobileNav(); }
-  else dock.activateOrInsert('console');
-}
+/** ===== REMOVED v19 · updateCodiceOut() and the .ed-out-note it fed
+ *  are gone: the "last run: ✓ ok · output in the Console tab · N runs…"
+ *  line (and its "Ctrl+Enter to run · edits are saved" sibling) was
+ *  retired with the user's v19 review — the editors are pure writing
+ *  space now, the run status lives in the Console tab and the
+ *  "modified" badge says the rest. ===== */
 function renderCodice(box) {
   box.innerHTML = '';
   const e = EX[S.current] || EX[ORDER[0]];
@@ -2857,22 +2858,16 @@ function renderCodice(box) {
     wrap.appendChild(ta);
     /* ===== CHANGED v18 · this panel is an EDITOR ONLY: the output console
        that used to live below the textarea is GONE — one console for the
-       whole app, the Console tab. In its place a compact note that always
-       says where the output went, with a button that opens the Console
-       (updated live by updateCodiceOut after every run). NB: elHtml()
-       returns ONE element — the note is built and appended on its own. ===== */
+       whole app, the Console tab.
+       ===== REMOVED v19 · the .ed-out-note that replaced the terminal (with
+       its "⌨ open Console" button) is gone too: zero footer noise, the
+       Console tab in the tab bar is one click away. ===== */
     const acts = elHtml(`<div class="ex-actions" style="margin-top:0">
       <button class="btn primary" id="cdRun">▶ run</button>
       <button class="btn" id="cdReset" title="Discard the edits: go back to the original program (passed steps or database project)">⟲ restore original</button>
       <button class="btn tiny" id="cdCopy" title="Copy the code to the clipboard">copy</button>
-      <span class="rt-note" id="cdStatus">Ctrl+Enter to run · edits are saved with your progress</span>
-    </div>`);
-    const outNote = elHtml(`<div class="ed-out-note">
-      <span data-outnote>▶ Run prints in the <b>Console</b> tab</span>
-      <button class="btn-cl" data-openconsole title="Open the Console tab: output and run history live there">⌨ open Console</button>
     </div>`);
     wrap.appendChild(acts);
-    wrap.appendChild(outNote);
 
     /* input → arms/disarms the override for this exercise:
        if the text goes back to being IDENTICAL to the original, the override
@@ -2888,11 +2883,7 @@ function renderCodice(box) {
         if (!Object.keys(st.customFiles).length) delete st.customFiles;
       }
       saveProgressDebounced();
-      aggiornaBadgeCodice(e);
-      document.querySelectorAll('#cdStatus').forEach(statusEl => {
-        statusEl.textContent = 'Ctrl+Enter to run · ' +
-          (codiceArmato(e, st) ? 'edits saved ✓' : 'no edits: runs the original program');
-      });
+      aggiornaBadgeCodice(e);   // v19 · the badge is the only editor status left
     });
     async function avvia() {
       saveProgressNow();
@@ -2917,14 +2908,15 @@ function renderCodice(box) {
     });
     /* ===== REMOVED v18 · the "🧹 clear" button went away together with the
        embedded terminal: the run history is managed from the Console tab
-       (its own "clear" button), which is now the only place it is shown. ===== */
-    const openConsoleBtn = wrap.querySelector('[data-openconsole]');
-    if (openConsoleBtn) openConsoleBtn.addEventListener('click', () => apriConsole());
+       (its own "clear" button), which is now the only place it is shown.
+       ===== REMOVED v19 · the "⌨ open Console" button of the old
+       .ed-out-note is gone with it. ===== */
+
     /* FIX v10 · during renderLayout() the panel is still DETACHED from
        the document (the dock mounts it only at the end): getElementById
        in here finds null. The badge updates in the next frame, when
        the tree is already attached. */
-    requestAnimationFrame(() => { aggiornaBadgeCodice(e); updateCodiceOut(); });
+    requestAnimationFrame(() => { aggiornaBadgeCodice(e); });
   })();
   const cdToRighe = wrap.querySelector('#cdToRighe');   // ===== NEW v12 · link to the lightweight editor =====
   if (cdToRighe) cdToRighe.addEventListener('click', () => apriRighe());
@@ -3041,7 +3033,7 @@ function renderConsole(box) {
     out.innerHTML = '<span class="console-empty">No output yet.\nPass the steps and press "▶ run": the code really runs in the browser.</span>';
   }
   out.appendChild(elHtml('<span class="cursor"></span>'));
-  wrap.querySelector('[title="Clear the console"]').addEventListener('click', () => { st.runs = []; st.outputs = []; delete st.verificato; saveProgress(); dock.refreshPanels(['console']); updateCodiceOut(); });
+  wrap.querySelector('[title="Clear the console"]').addEventListener('click', () => { st.runs = []; st.outputs = []; delete st.verificato; saveProgress(); dock.refreshPanels(['console']); });
   wrap.querySelector('[data-act="run"]').addEventListener('click', () => eseguiEsercizio(e));
   const btnCd = wrap.querySelector('[data-act="codice"]');   // ===== NEW v10 =====
   if (btnCd) btnCd.addEventListener('click', () => apriCodice());
@@ -3076,15 +3068,9 @@ function renderProgressi(box) {
     return `<div class="ch-prog"><div class="row"><span>Ch. ${c.n} · ${esc(c.t)}</span><span class="muted">${doneN}/${c.ex.length}</span></div>
         <div class="bar"><i style="width:${Math.round(doneN / c.ex.length * 100)}%"></i></div></div>`;
   }).join('')}
-    <hr class="hr">
-    <div class="step-actions" style="margin-top:14px">
-      <button class="btn danger" id="btnResetProg">⟲ Reset all progress</button>
-    </div>
+    <!-- ===== CHANGED v19 · the "⟲ Reset all progress" button moved to
+         Settings → Reset (one place owns every "start over"). ===== -->
   </div>`);
-  wrap.querySelector('#btnResetProg').addEventListener('click', async () => {
-    const ok = await modal('<h3>Reset all progress?</h3><p>The progress of all exercises will be deleted and the layout will go back to the default.</p>', 'Yes, reset');
-    if (ok) resetAll();
-  });
   box.innerHTML = ''; box.appendChild(wrap);
 }
 
@@ -3107,12 +3093,13 @@ function renderGuida(box) {
       <p>The blue <b>keywords</b> are clickable: <b>first click</b> = concept, <b>second click</b> = syntax, <b>full hint</b> = the whole line.</p>
     </div>
     <div class="guide-sec">
-      <h3>🧭 Finding your way around <span class="chip acc" style="font-size:.59375rem">updated in v18</span></h3>
+      <h3>🧭 Finding your way around <span class="chip acc" style="font-size:.59375rem">updated in v19</span></h3>
       <p>· The <b>☰ Modules</b> tree (199 exercises) is a <b>slide-out menu</b> on the left: open it from the first icon of the activity bar — or from ☰ in the header on a phone — pick an exercise, and it closes by itself.</p>
       <p>· <b>Hover the left bar</b> and it expands like a bubble, showing the <b>full names</b> of the panels; each button has <b>one name</b> — the same name of the tab it opens. Move away and it shrinks back to the icons (the keyboard gets the same with Tab: focus expands it).</p>
       <p>· The <b>icons on the left bar are toggles</b>: click the icon of the panel you are looking at and the panel <b>closes</b>; click again and it comes back. The × on each tab does the same.</p>
+      <p>· <b>Drag a tab only sideways</b> (new in v19): panels stack <b>side by side</b> — to the left or right of another one, or into its tab bar. A tab can never end up above or below another.</p>
       <p>· The <b>account button is in the top-right corner</b>: it shows your avatar and the exercises completed; a click opens the summary (progress, autonomy, sync) and the <b>⚙ edit</b> bridge to the Settings.</p>
-      <p>· The <b>⚙ Settings</b> (last icon of the left bar, or ⚙ on a phone) hold the <b>dark / light theme</b> (both keep terminals and code areas black), the <b>access credentials</b> and the <b>privacy</b> switches.</p>
+      <p>· The <b>⚙ Settings</b> (last icon of the left bar, or ⚙ on a phone) hold the <b>dark / light theme</b> (both keep terminals and code areas black), the <b>access credentials</b>, the <b>privacy</b> switches and the <b>reset</b> buttons.</p>
       <p>· This <b>Guide</b> is an overlay: it never takes space away from the code.</p>
       <p>· On a phone, the bottom bar holds the four tabs you use between two taps; everything else is in the <b>⋯ More</b> menu.</p>
     </div>
@@ -3120,7 +3107,7 @@ function renderGuida(box) {
       <h3>⌨ The Code editor, in full</h3>
       <p>The <b>⌨ code</b> button next to "▶ Run" opens the exercise's <b>full program</b> — exactly the code the Run button sends to the runtime. One line under the title tells you which program you are looking at; the details are these:</p>
       <p>· You can <b>modify it</b> freely: from that moment "Run and check the output" runs <b>your version</b> (marked ⚠, saved with your progress) — so you can reach the same result <b>in a different way</b> than the predetermined solution. The soft output check stays active: if your program prints the expected lines, the "✓" arrives.</p>
-      <p>· <b>Editors only, one console</b> (v18): the <b>Code</b> and <b>Lines</b> tabs are pure writing space — no terminal below the editor. <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> runs, and the <b>output lands in the Console tab</b>: a note under the editor tells you where it went and a button takes you there. The full history and the "clear" command live in the Console.</p>
+      <p>· <b>Editors only, one console</b> (v18): the <b>Code</b> and <b>Lines</b> tabs are pure writing space — no terminal below the editor. <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> runs, and the <b>output lands in the Console tab</b>, with the full history and the "clear" command.</p>
       <p>· <b>Fragments of a larger program</b> (the ch. 12–14 games, class extensions…): the steps are pieces of a whole project. The editor shows <b>all the files</b>, from the initial imports to the end, and ▶ Run always executes the <b>full project</b> — with your edits, file by file (e.g. change a speed in <code>settings.py</code> and the game starts with it).</p>
       <p>· <b>Multi-file exercises</b>: one tab per file, from the main to the last module; ▶ Run executes <b>your files</b>.</p>
       <p>· <b>Support modules</b> (read-only project files from the local database) sit in the last tabs: they run together with your program, you don't rewrite them.</p>
@@ -3147,74 +3134,10 @@ function renderGuida(box) {
   </div>`));
 }
 
-/* ---------- SANDBOX panel ---------- */
-const SANDBOX_SAMPLES = {
-  'Welcome': `import sys\nprint("Hello from the real runtime:", sys.version)\n`,
-  'f-strings and loops': `name = "Ada"\nprint(f"Hello {name}!")\nfor i in range(1, 5):\n    print(f"square of {i} = {i**2}")\n`,
-  'Matplotlib': `import matplotlib.pyplot as plt\nplt.plot([1, 4, 9, 16, 25])\nplt.title("Squares")\nplt.show()\n`,
-  'Plotly': `import plotly.express as px\nfig = px.bar(x=["A","B","C"], y=[3, 7, 2], title="Example")\nfig.show()\n`,
-  'Pygame (blue sky)': `import pygame\npygame.init()\nscreen = pygame.display.set_mode((400, 300))\nscreen.fill((0, 0, 255))\npygame.display.flip()\n`,
-  'Playable Pygame 🎮': `import sys\nimport pygame\n\npygame.init()\nscreen = pygame.display.set_mode((480, 320))\npygame.display.set_caption("Move with the arrows!")\nclock = pygame.time.Clock()\nx, y = 220, 140\ndx = dy = 0\n\nwhile True:\n    for event in pygame.event.get():\n        if event.type == pygame.QUIT:\n            sys.exit()\n        elif event.type == pygame.KEYDOWN:\n            if event.key == pygame.K_LEFT:\n                dx = -6\n            elif event.key == pygame.K_RIGHT:\n                dx = 6\n            elif event.key == pygame.K_UP:\n                dy = -6\n            elif event.key == pygame.K_DOWN:\n                dy = 6\n        elif event.type == pygame.KEYUP:\n            if event.key in (pygame.K_LEFT, pygame.K_RIGHT):\n                dx = 0\n            elif event.key in (pygame.K_UP, pygame.K_DOWN):\n                dy = 0\n    x, y = x + dx, y + dy\n    screen.fill((24, 26, 32))\n    pygame.draw.circle(screen, (120, 220, 130), (x, y), 18)\n    pygame.display.flip()\n    clock.tick(60)\n`,
-  'sqlite3 in memory': `import sqlite3\nconn = sqlite3.connect(":memory:")\ncur = conn.cursor()\ncur.execute("CREATE TABLE grades (name TEXT, grade INT)")\ncur.executemany("INSERT INTO grades VALUES (?, ?)", [("Ada", 9), ("Alan", 7)])\nfor name, grade in cur.execute("SELECT name, grade FROM grades ORDER BY grade DESC"):\n    print(name, "-", grade)\n`,
-};
-function renderSandbox(box) {
-  box.innerHTML = '';
-  const wrap = elHtml(`<div class="sandbox-wrap">
-    <div>
-      <h2 class="pan-title">${icon('flask')} Sandbox Python</h2>
-      <p class="pan-sub" style="margin-bottom:9px">Free code on a real CPython 3.14 interpreter (Pyodide). Supports Matplotlib, Plotly and <b>playable</b> Pygame (sample "Playable Pygame 🎮").</p>
-      <div class="sandbox-samples"></div>
-    </div>
-    <textarea class="sandbox-ta" id="sandboxTa" aria-label="Python sandbox — free code editor" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
-    <div class="ex-actions" style="margin-top:0">
-      <button class="btn primary" id="sbRun">▶ Run</button>
-      <span class="rt-note" id="sbStatus">Ctrl+Enter to run</span>
-    </div>
-    <div class="console-out" id="sbOut" style="min-height:110px;background:#101216;border:1px solid var(--border);border-radius:9px;padding:9px 11px"><span class="console-empty">The output will appear here.</span></div>
-  </div>`);
-  const ta = wrap.querySelector('#sandboxTa');
-  ta.value = S.drafts['sandbox'] || SANDBOX_SAMPLES['Welcome'];
-  ta.addEventListener('input', () => { S.drafts['sandbox'] = ta.value; });
-  armAutogrow(ta, 240);   // ===== NEW v17 · same treatment as the Code editor =====
-  const out = wrap.querySelector('#sbOut');
-  const campionamenti = wrap.querySelector('.sandbox-samples');
-  Object.keys(SANDBOX_SAMPLES).forEach(nome => {
-    const b = elHtml(`<button>${esc(nome)}</button>`);
-    b.addEventListener('click', () => { ta.value = SANDBOX_SAMPLES[nome]; S.drafts['sandbox'] = ta.value; ta.focus(); });
-    campionamenti.appendChild(b);
-  });
-  const runBt = wrap.querySelector('#sbRun');
-  const statusEl = wrap.querySelector('#sbStatus');
-  async function run() {
-    if (getStatus().running) return;
-    runBt.disabled = true;
-    statusEl.textContent = getStatus().status === 'ready' ? 'running…' : 'first run: downloading the runtime (~10 MB)…';
-    out.innerHTML = '<span class="line-dim">…</span>';
-    const res = await runPythonCode(ta.value, {}, {});
-    // the panel may have been re-rendered (e.g. the Game panel opened
-    // during the run): write to the current element, not the captured one
-    const outNow = document.getElementById('sbOut') || out;
-    outNow.innerHTML = '';
-    if (res.ok) {
-      outNow.appendChild(elHtml(`<span class="run-meta">ok · ${res.durataMs} ms</span>`));
-      outNow.appendChild(elHtml(`<div class="run-out">${esc(res.output || '(no output)')}</div>`));
-    } else {
-      const err = res.error;
-      outNow.appendChild(elHtml(`<span class="run-meta">error · ${res.durataMs} ms</span>`));
-      if (res.output) outNow.appendChild(elHtml(`<div class="run-out">${esc(res.output)}</div>`));
-      outNow.appendChild(elHtml(`<div class="run-err">${esc(err.tipo)}: ${esc(err.messaggio || '')}</div>`));
-      if (err.hint) outNow.appendChild(elHtml(`<span class="run-hint">${esc(err.hint)}</span>`));
-      if (err.traceback) outNow.appendChild(elHtml(`<details class="run-tb"><summary>full traceback</summary><pre>${esc(err.traceback)}</pre></details>`));
-    }
-    runBt.disabled = false;
-    statusEl.textContent = 'Ctrl+Enter to run';
-  }
-  runBt.addEventListener('click', run);
-  ta.addEventListener('keydown', ev => {
-    if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); run(); }
-  });
-  box.appendChild(wrap);
-}
+/* ===== REMOVED v19 · the SANDBOX panel (SANDBOX_SAMPLES + renderSandbox)
+   is gone: the ⌨ Code editor is already a free-program editor on the same
+   runtime — one writing surface less, one sidebar button less. The status
+   bar's Python chip now opens the Console. ===== */
 
 /* ---------- ACCOUNT panel ---------- */
 function renderAccount(box) {
@@ -3254,7 +3177,7 @@ function renderAccount(box) {
     <!-- ===== NEW v17 · bridge to the Settings overlay: credentials,
          privacy and theme live there now. ===== -->
     <div class="step-actions" style="margin-top:8px">
-      <button class="btn tiny" id="btnStgFromAccount">⚙ settings — credentials, privacy, theme</button>
+      <button class="btn tiny" id="btnStgFromAccount">⚙ settings</button>
     </div>
   </div>`);
   const msg = wrap.querySelector('#authMsg');
@@ -3297,10 +3220,10 @@ function renderStatus() {
   const py = getStatus();
   const sync = storage.syncStatus();
   const pyChip =
-    py.status === 'ready' ? `<span class="sb-chip ok" data-act="sandbox" title="Python runtime active">Python ${esc(py.version || '3.14')} ✓</span>` :
+    py.status === 'ready' ? `<span class="sb-chip ok" data-act="console" title="Python runtime active">Python ${esc(py.version || '3.14')} ✓</span>` :
       py.status === 'loading' ? `<span class="sb-chip busy"><span class="spin"></span> runtime…</span>` :
-        py.status === 'error' ? `<span class="sb-chip err" data-act="sandbox">runtime ✗</span>` :
-          `<span class="sb-chip" data-act="sandbox">Python (Pyodide) not loaded</span>`;
+        py.status === 'error' ? `<span class="sb-chip err" data-act="console">runtime ✗</span>` :
+          `<span class="sb-chip" data-act="console">Python (Pyodide) not loaded</span>`;
   /* ===== CHANGED v18 · online-site wording: "local mode"/"local only"
      became "sign in to sync" (the app is on the web: the account is the
      feature, offline stays the fallback) and "cloud off" (not configured). ===== */
@@ -3392,7 +3315,9 @@ const Panels = {
   grafici: { id: 'grafici', title: 'Charts', icon: 'chart', render: renderGrafici },   // ===== NEW =====
   gioco: { id: 'gioco', title: 'Game', icon: 'flask', render: renderGioco },     // ===== NEW =====
   progressi: { id: 'progressi', title: 'Progress', icon: 'chart', render: renderProgressi },
-  sandbox: { id: 'sandbox', title: 'Sandbox', icon: 'flask', render: renderSandbox },
+  /* ===== REMOVED v19 · 'sandbox': the ⌨ Code editor already covers free
+     programming; the dock strips it from layouts saved by older versions
+     (unknown pid → tab dropped automatically). ===== */
   account: { id: 'account', title: 'Account', icon: 'user', render: renderAccount },
   /* ===== CHANGED v16 · 'moduli' and 'guida' are NOT dock panels anymore:
      the Modules tree renders inside the side drawer (renderDrawerBody)
@@ -3535,10 +3460,30 @@ function init() {
     const ds = document.getElementById('drawerSearch');
     if (ds && document.activeElement !== ds) ds.value = ev.target.value;
   });
-  $('#btnReset').addEventListener('click', async () => {
-    const ok = await modal('<h3>Restore the prototype?</h3><p>Panel layout and progress will go back to the initial state.</p>', 'Restore');
-    if (ok) resetAll();
-  });
+  /* ===== REMOVED v19 · the titlebar "⟲ Reset" button: the reset moved
+     into Settings → Reset (layout only, or everything). ===== */
+  /* ===== NEW v19 · cookie notice (the site is online and indexed): one
+     honest banner, shown once. This app sets NO cookies at all — progress
+     and preferences live in this browser's localStorage — and there is no
+     analytics. "privacy" opens the Settings overlay, where the storage
+     list spells out every byte. ===== */
+  const cookieBar = document.getElementById('cookieBar');
+  if (cookieBar) {
+    let cookieOk = false;
+    try { cookieOk = !!localStorage.getItem('tutorCookieOk'); } catch (e) { }
+    if (!cookieOk) setTimeout(() => {
+      cookieBar.hidden = false;
+      requestAnimationFrame(() => cookieBar.classList.add('show'));
+    }, 1200);
+    const cbOk = document.getElementById('cbOk');
+    if (cbOk) cbOk.addEventListener('click', () => {
+      try { localStorage.setItem('tutorCookieOk', '1'); } catch (e) { }
+      cookieBar.classList.remove('show');
+      setTimeout(() => { cookieBar.hidden = true; }, 380);
+    });
+    const cbInfo = document.getElementById('cbInfo');
+    if (cbInfo) cbInfo.addEventListener('click', () => toggleImpostazioni(true));
+  }
   /* ===== CHANGED v16 · the Guide is an overlay, not a dock tab ===== */
   $('#btnGuida').addEventListener('click', () => toggleGuida());
   /* ===== NEW v17 · the ACCOUNT button (top right): popover with info,

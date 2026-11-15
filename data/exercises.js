@@ -1694,15 +1694,15 @@ const CH = [
       "re": "^\\w+\\s*=\\s*\\[\\s*[\"'].+[\"']\\s*(,\\s*[\"'].+[\"']\\s*)+\\]$"
      },
      {
-      "f": "Watch the {{error}}: open the Sandbox and ask for index 3.",
+      "f": "Watch the {{error}}: open the Code tab and ask for index 3.",
       "k": {
        "error": [
-        "A list of three elements only goes up to index 2: asking for index 3 is the classic off-by-one error. Open the <b>Sandbox</b> panel, paste <code>motorcycles = [\"honda\", \"yamaha\", \"suzuki\"]</code> and <code>print(motorcycles[3])</code>, then press Run: you'll see the traceback with the IndexError.",
+        "A list of three elements only goes up to index 2: asking for index 3 is the classic off-by-one error. Open the <b>⌨ Code</b> tab, paste <code>motorcycles = [\"honda\", \"yamaha\", \"suzuki\"]</code> and <code>print(motorcycles[3])</code>, then press ▶ run: you'll see the traceback with the IndexError.",
         "print(motorcycles[3])  # IndexError!"
        ]
       },
       "c": null,
-      "btn": "✓ Error observed in the Sandbox",
+      "btn": "✓ Error observed in the Code tab",
       "note": "The line that causes the error does NOT go into the exercise program: in the next step you'll fix it using the index -1."
      },
      {
@@ -2469,12 +2469,12 @@ const CH = [
       "f": "Try to {{modify}} an item: Python must refuse.",
       "k": {
        "modify": [
-        "Assigning to an element of a tuple raises a TypeError: concrete proof of immutability. Open the <b>Sandbox</b> panel, paste <code>menu = (\"rice\", \"pasta\", \"chicken\", \"salad\", \"cake\")</code> and <code>menu[0] = \"soup\"</code>, press Run, and watch the TypeError.",
+        "Assigning to an element of a tuple raises a TypeError: concrete proof of immutability. Open the <b>⌨ Code</b> tab, paste <code>menu = (\"rice\", \"pasta\", \"chicken\", \"salad\", \"cake\")</code> and <code>menu[0] = \"soup\"</code>, press ▶ run, and watch the TypeError.",
         "menu[0] = \"soup\"  # TypeError!"
        ]
       },
       "c": null,
-      "btn": "✓ Error observed in the Sandbox",
+      "btn": "✓ Error observed in the Code tab",
       "note": "The line that causes the error does NOT go into the exercise's program: tuples get rewritten as a whole, as in the next step."
      },
      {
@@ -10022,7 +10022,7 @@ const CH = [
        "^cd\\s+\\w+\\s*$",
        "^git\\s+init\\s*$"
       ],
-      "note": "Shell command: run it in the VS Code terminal, not in the Python sandbox."
+      "note": "Shell command: run it in the VS Code terminal, not in the browser."
      },
      {
       "f": "Check the {{status}} of the repository.",
