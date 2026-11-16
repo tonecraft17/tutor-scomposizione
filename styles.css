@@ -4531,7 +4531,7 @@ textarea:hover,
   overflow-y: auto;
   overscroll-behavior: contain;
   display: flex;
-  align-items: center;
+  align-items: safe center;
   justify-content: center;
   padding: 34px 22px 118px;   /* v21 · bottom clearance: the cookie notice
                                  (fixed at the bottom on the first visit)
