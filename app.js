@@ -1916,6 +1916,7 @@ function stepCard(e, idx) {
     const nExp = s.c.split('\n').length;
     const row = elHtml(`<div class="code-input-row"><span class="ln">${prevLines.length + 1}</span></div>`);
     const ta = document.createElement('textarea');
+    ta.name = `step-code-${e.id}-${idx}`;
     ta.className = 'code-input'; ta.spellcheck = false; ta.autocapitalize = 'off'; ta.autocomplete = 'off';
     ta.setAttribute('aria-label', `Python code editor, step ${idx + 1} of ${e.steps.length} of exercise ${e.id}`);
     /* ===== CHANGED v18 · BIGGER writing zone: the step textarea starts at
@@ -1947,7 +1948,9 @@ function stepCard(e, idx) {
        step: the reflection textarea grows with the answer (96px minimum). ===== */
     const refl = elHtml(`<div class="reflect-box"><textarea id="refTa" aria-label="Written answer, step ${idx + 1} of ${e.steps.length}: ${esc(s.ta)}" placeholder="${esc(s.ta)}">${esc(exState(e.id).notes[idx] || '')}</textarea></div>`);
     card.appendChild(refl);
-    armAutogrow(refl.querySelector('#refTa'), 96);
+    const ta = refl.querySelector('#refTa');
+    ta.name = `written-answer-${e.id}-${idx}`;
+    armAutogrow(ta, 96);
     const acts = elHtml(`<div class="step-actions"><button class="btn primary">✓ Confirm answer</button></div>`);
     acts.querySelector('button').addEventListener('click', () => confirmText(e, idx));
     card.appendChild(acts);
@@ -2669,6 +2672,7 @@ function renderRighe(box) {
           <span class="rg-range">${n} line${n === 1 ? '' : 's'} · as in "Exercise completed"</span>
         </div>`);
         const ta = document.createElement('textarea');
+        ta.name = `exercise-lines-${e.id}-${k}`;
         ta.className = 'codice-ta rg-ta'; ta.spellcheck = false; ta.autocapitalize = 'off'; ta.autocomplete = 'off';
         ta.setAttribute('aria-label', `Editor of your exercise lines${slice.passi.length > 1 ? ' — step ' + (k + 1) + ' of ' + slice.passi.length : ''}`);
         ta.rows = Math.max(3, n + 1);
@@ -2741,6 +2745,7 @@ function renderRighe(box) {
           <button class="btn-cl" data-open="${esc(fn)}" title="Open the file in ⌨ Code (with the support modules)">⌨ open module</button>
         </div>`);
         const ta = document.createElement('textarea');
+        ta.name = `project-file-${e.id}-${fn}`;
         ta.className = 'codice-ta rg-ta'; ta.spellcheck = false; ta.autocapitalize = 'off'; ta.autocomplete = 'off';
         ta.setAttribute('aria-label', `Editor of the project file ${fn}${main ? ' — file executed by run' : ''}`);
         ta.rows = Math.max(3, (cur || orig).split('\n').length + 1);
@@ -2768,6 +2773,7 @@ function renderRighe(box) {
         <button class="btn-cl" data-open="${esc(slice.main)}" title="Open the full program in ⌨ Code">⌨ open module</button>
       </div>`);
       const ta = document.createElement('textarea');
+      ta.name = `exercise-lines-${e.id}`;
       ta.className = 'codice-ta rg-ta'; ta.spellcheck = false; ta.autocapitalize = 'off'; ta.autocomplete = 'off';
       ta.setAttribute('aria-label', `Editor of the exercise lines in ${slice.main}`);
       ta.rows = Math.max(5, (val || righe).split('\n').length + 2);
